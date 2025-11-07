@@ -11,6 +11,7 @@ namespace AdvisorySystem.Api.Data
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<DocumentVersion> DocumentVersions { get; set; } = null!;
         public DbSet<Submission> Submissions { get; set; } = null!;
+        public DbSet<Comment> Comments { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -22,6 +23,12 @@ namespace AdvisorySystem.Api.Data
             b.Entity<DocumentVersion>()
                 .HasIndex(x => new { x.DocumentId, x.VersionNo })
                 .IsUnique();
+
+            b.Entity<Comment>()
+                .HasOne<DocumentVersion>()
+                .WithMany()
+                .HasForeignKey(c => c.DocumentVersionId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 
@@ -58,5 +65,14 @@ namespace AdvisorySystem.Api.Data
         public string StudentId { get; set; } = "";
         public DateTime DueDate { get; set; }
         public string Status { get; set; } = "Pending";
+    }
+
+    public class Comment
+    {
+        public int Id { get; set; }
+        public int DocumentVersionId { get; set; }
+        public string AuthorUserId { get; set; } = "";
+        public string Content { get; set; } = "";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

@@ -1,5 +1,6 @@
 using System.Text;
 using AdvisorySystem.Api.Data;
+using AdvisorySystem.Api.Middleware;
 using AdvisorySystem.Api.Models;
 using AdvisorySystem.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,11 +31,11 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("frontend", p => p
-        .WithOrigins("http://localhost:5173")
+        .WithOrigins("http://localhost:5173", "http://localhost:3000") 
         .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
-
 // JWT
 var jwt = builder.Configuration.GetSection("Jwt");
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
@@ -62,21 +63,21 @@ builder.Services.AddAuthentication(o =>
     o.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = ctx =>
-        {
+  {
             var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ctx.Exception, "JWT authentication failed");
-            return Task.CompletedTask;
+     logger.LogError(ctx.Exception, "JWT authentication failed");
+         return Task.CompletedTask;
         },
-        OnMessageReceived = ctx =>
+   OnMessageReceived = ctx =>
         {
             // allow token via Authorization header only (default). Keep for diagnostics.
-            return Task.CompletedTask;
+ return Task.CompletedTask;
         },
         OnChallenge = ctx =>
-        {
-            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogWarning("JWT OnChallenge: {0}", ctx.ErrorDescription);
-            return Task.CompletedTask;
+ {
+          var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning("JWT OnChallenge: {0}", ctx.ErrorDescription);
+    return Task.CompletedTask;
         }
     };
 });
@@ -90,24 +91,24 @@ builder.Services.AddSwaggerGen(c =>
     // Add JWT Bearer support to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Enter the JWT token only (do NOT include the 'Bearer ' prefix).",
+Description = "Enter the JWT token only (do NOT include the 'Bearer ' prefix).",
         Name = "Authorization",
-        In = ParameterLocation.Header,
+  In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
-        BearerFormat = "JWT"
+    BearerFormat = "JWT"
     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+ c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
-                Scheme = "bearer",
-                Name = "Bearer",
-                In = ParameterLocation.Header
-            },
+       new OpenApiSecurityScheme
+{
+           Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
+   Scheme = "bearer",
+        Name = "Bearer",
+       In = ParameterLocation.Header
+       },
             Array.Empty<string>()
         }
     });
@@ -131,6 +132,9 @@ app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseCors("frontend");
+
+// File size validation middleware
+app.UseFileSizeValidation();
 
 app.UseAuthentication();
 app.UseAuthorization();
