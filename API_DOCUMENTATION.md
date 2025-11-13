@@ -57,6 +57,13 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `GET /api/search/documents` - Search documents
 - `GET /api/search/tags/popular` - Popular tags
 
+### Notifications
+- `GET /api/notifications` - Get my notifications
+- `GET /api/notifications/unread-count` - Get unread notification count
+- `PATCH /api/notifications/{id}/read` - Mark notification as read
+- `PATCH /api/notifications/mark-all-read` - Mark all as read
+- `POST /api/notifications` - Create notification (Admin only)
+
 ### Debug (Dev Only)
 - `GET /api/debug/users` - List all users
 - `DELETE /api/debug/users/all` - Delete all users ⚠️
@@ -307,6 +314,112 @@ Authorization: Bearer {token}
 
 ---
 
+## 🔔 Notification Endpoints
+
+### Get My Notifications
+```http
+GET /api/notifications?isRead=false&limit=50
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `isRead` (optional): Filter by read status (true/false)
+- `limit` (optional, default: 50): Maximum number of notifications
+
+**Response:**
+```json
+{
+    "id": "user-id-123",
+    "userName": "admin@local",
+    "email": "admin@local",
+    "emailConfirmed": true,
+  "roles": ["Admin"]
+  }
+]
+```
+
+**Notification Types:**
+- `0` = DeadlineApproaching
+- `1` = NewComment
+- `2` = AdvisorAssigned
+- `3` = DocumentUploaded
+- `4` = SubmissionStatusChanged
+- `5` = General
+
+---
+
+### Get Unread Count
+```http
+GET /api/notifications/unread-count
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "unreadCount": 5
+}
+```
+
+---
+
+### Mark Notification as Read
+```http
+PATCH /api/notifications/{id}/read
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "Notification marked as read"
+}
+```
+
+---
+
+### Mark All as Read
+```http
+PATCH /api/notifications/mark-all-read
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "All notifications marked as read"
+}
+```
+
+---
+
+### Create Notification (Admin Only)
+```http
+POST /api/notifications
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "userId": "user-id-123",
+  "title": "System Maintenance",
+  "message": "The system will be down for maintenance on...",
+  "type": 5,
+  "relatedEntityId": null,
+  "relatedEntityType": null
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Notification created"
+}
+```
+
+**Note:** Requires `Admin` role
+
+---
+
 ## 📅 Submission Endpoints
 
 ### Get My Submissions
@@ -497,6 +610,99 @@ Authorization: Bearer {token}
   }
 ]
 ```
+
+---
+
+## 📬 Notification Endpoints
+
+### Get My Notifications
+```http
+GET /api/notifications
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "title": "Document Reviewed",
+    "message": "Your document has been reviewed by the advisor.",
+    "isRead": false,
+    "createdAt": "2024-01-16T08:30:00Z"
+  }
+]
+```
+
+---
+
+### Get Unread Notification Count
+```http
+GET /api/notifications/unread-count
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "count": 2
+}
+```
+
+---
+
+### Mark Notification as Read
+```http
+PATCH /api/notifications/{id}/read
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "Notification marked as read"
+}
+```
+
+---
+
+### Mark All Notifications as Read
+```http
+PATCH /api/notifications/mark-all-read
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "All notifications marked as read"
+}
+```
+
+---
+
+### Create Notification (Admin only)
+```http
+POST /api/notifications
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "title": "New Document Assignment",
+  "message": "You have been assigned a new document to review.",
+  "userId": "user-id-123"
+}
+```
+
+**Response:**
+```json
+{
+  "id": 2,
+  "createdAt": "2024-01-16T09:00:00Z"
+}
+```
+
+**Note:** Requires `Admin` role
 
 ---
 

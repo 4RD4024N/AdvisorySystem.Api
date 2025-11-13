@@ -12,6 +12,7 @@ namespace AdvisorySystem.Api.Data
         public DbSet<DocumentVersion> DocumentVersions { get; set; } = null!;
         public DbSet<Submission> Submissions { get; set; } = null!;
         public DbSet<Comment> Comments { get; set; } = null!;
+        public DbSet<Notification> Notifications { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder b)
         {

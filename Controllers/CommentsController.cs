@@ -1,4 +1,6 @@
 using AdvisorySystem.Api.Data;
+using AdvisorySystem.Api.Models;
+using AdvisorySystem.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +15,12 @@ namespace AdvisorySystem.Api.Controllers;
 public class CommentsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notificationService;
 
-    public CommentsController(AppDbContext db)
+    public CommentsController(AppDbContext db, INotificationService notificationService)
     {
-      _db = db;
+        _db = db;
+        _notificationService = notificationService;
     }
 
     private string GetUserId()
@@ -43,7 +47,7 @@ public class CommentsController : ControllerBase
 [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCommentDto dto)
     {
-var uid = GetUserId();
+      var uid = GetUserId();
         
         // Versiyonun varlýðýný kontrol et
         var version = await _db.DocumentVersions
@@ -58,17 +62,44 @@ var uid = GetUserId();
           !User.IsInRole("Admin"))
             return Forbid();
 
- var comment = new Comment
-    {
-     DocumentVersionId = dto.DocumentVersionId,
-            AuthorUserId = uid,
-            Content = dto.Content
+        var comment = new Comment
+        {
+       DocumentVersionId = dto.DocumentVersionId,
+  AuthorUserId = uid,
+   Content = dto.Content
         };
 
     _db.Comments.Add(comment);
-  await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync();
 
-   return Ok(new { comment.Id, comment.CreatedAt });
+        // Create notification for document owner (if not the commenter)
+    if (version.Document.OwnerUserId != uid)
+ {
+            await _notificationService.CreateNotificationAsync(
+         version.Document.OwnerUserId,
+            "New Comment",
+           $"A new comment was added to your document: {version.Document.Title}",
+  NotificationType.NewComment,
+    version.Document.Id.ToString(),
+      "Document"
+);
+        }
+
+        // Create notification for advisor (if exists and not the commenter)
+        if (!string.IsNullOrEmpty(version.Document.AdvisorUserId) && 
+          version.Document.AdvisorUserId != uid)
+        {
+        await _notificationService.CreateNotificationAsync(
+           version.Document.AdvisorUserId,
+          "New Comment",
+       $"A new comment was added to document: {version.Document.Title}",
+         NotificationType.NewComment,
+        version.Document.Id.ToString(),
+       "Document"
+  );
+        }
+
+        return Ok(new { comment.Id, comment.CreatedAt });
     }
 
     // Yorumu sil
