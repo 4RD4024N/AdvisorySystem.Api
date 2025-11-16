@@ -23,26 +23,62 @@ public class SubmissionsController : ControllerBase
 _users = users;
     }
 
-    private string GetUserId()
+    private string? GetUserId()
     {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!string.IsNullOrEmpty(sub)) return sub;
-        var nameId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-  if (!string.IsNullOrEmpty(nameId)) return nameId;
-        return User.Identity?.Name ?? throw new UnauthorizedAccessException("User ID not found");
+        try
+        {
+          var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+         ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                ?? User.FindFirstValue("sub")
+    ?? User.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+      ?? User.Identity?.Name;
+
+        return userId;
+        }
+        catch
+        {
+ return null;
+        }
     }
 
-  // Öðrencinin teslim tarihlerini listele
-  [HttpGet("my")]
-[Authorize(Roles = "Student")]
+    // Get all submissions or my submissions based on role
+    [HttpGet("my")]
     public async Task<IActionResult> GetMySubmissions()
     {
-        var uid = GetUserId();
-        var submissions = await _db.Submissions
-            .Where(s => s.StudentId == uid)
-            .OrderBy(s => s.DueDate)
-        .ToListAsync();
-        return Ok(submissions);
+     try
+        {
+      var uid = GetUserId();
+        if (string.IsNullOrEmpty(uid))
+      return Unauthorized(new { error = "User identification failed" });
+
+            // Check if user is Admin or Advisor
+            var isAdmin = User.IsInRole("Admin");
+            var isAdvisor = User.IsInRole("Advisor");
+
+        List<Submission> submissions;
+
+            if (isAdmin || isAdvisor)
+    {
+    // Admin/Advisor can see all submissions
+                submissions = await _db.Submissions
+          .OrderBy(s => s.DueDate)
+          .ToListAsync();
+      }
+        else
+        {
+    // Students see only their submissions
+      submissions = await _db.Submissions
+    .Where(s => s.StudentId == uid)
+          .OrderBy(s => s.DueDate)
+         .ToListAsync();
+            }
+
+   return Ok(submissions);
+        }
+      catch (Exception ex)
+        {
+      return StatusCode(500, new { error = "Failed to retrieve submissions", details = ex.Message });
+        }
     }
 
     // Yeni teslim tarihi oluþtur

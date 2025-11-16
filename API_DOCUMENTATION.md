@@ -19,6 +19,26 @@ Authorization: Bearer YOUR_JWT_TOKEN
 | admin@local | Admin123! | Admin |
 | stu@local | Arda123! | Student |
 
+### JWT Token
+- Expiry: 1440 minutes (24 hours)
+- Algorithm: HMAC-SHA256
+- Claims: `sub`, `email`, `name`, `role`, `nameidentifier`, `uid`
+- Refresh: Available via `/api/auth/refresh` endpoint
+- Validate: Check validity with `/api/auth/validate` endpoint
+
+**Token Lifecycle:**
+1. Login → Get 24-hour token
+2. Use token for API calls
+3. (Optional) Refresh before expiry with `/api/auth/refresh`
+4. (Optional) Validate with `/api/auth/validate`
+5. Logout or let it expire
+
+**Best Practices:**
+- Store token in localStorage
+- Store expiresAt timestamp
+- Refresh token 30 minutes before expiry
+- Handle 401 errors by refreshing or re-login
+
 ---
 
 ## 📋 Endpoints Summary
@@ -26,6 +46,8 @@ Authorization: Bearer YOUR_JWT_TOKEN
 ### Auth
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login and get JWT token
+- `POST /api/auth/refresh` - Refresh JWT token (NEW)
+- `GET /api/auth/validate` - Validate JWT token (NEW)
 
 ### Documents
 - `GET /api/documents` - Get my documents
@@ -53,6 +75,30 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `GET /api/statistics/advisor/summary` - Advisor stats
 - `GET /api/statistics/admin/overview` - Admin overview
 
+### Students (Admin/Advisor)
+- `GET /api/students` - Get all students with search
+- `GET /api/students/{id}` - Get student details
+- `POST /api/students/{id}/send-notification` - Send notification to student
+- `POST /api/students/send-bulk-notification` - Send notification to multiple students
+- `POST /api/students/send-notification-to-all` - Send notification to all students
+- `GET /api/students/without-advisor` - Get students without advisor
+- `GET /api/students/with-pending-submissions` - Get students with pending submissions
+
+### Storage Management (Admin)
+- `GET /api/storage/info` - Get storage configuration info
+- `GET /api/storage/statistics` - Get storage statistics
+- `GET /api/storage/files` - List all files
+- `GET /api/storage/exists` - Check if file exists
+- `DELETE /api/storage/cleanup-orphaned` - Clean up orphaned files
+- `GET /api/storage/metadata/{versionId}` - Get file metadata
+
+### Health & Monitoring
+- `GET /api/health` - Basic health check (public)
+- `GET /api/health/detailed` - Detailed health check (Admin)
+- `GET /api/health/database` - Database connectivity check (Admin)
+- `GET /api/health/metrics` - Application metrics (Admin)
+- `GET /api/health/system` - System information (Admin)
+
 ### Search
 - `GET /api/search/documents` - Search documents
 - `GET /api/search/tags/popular` - Popular tags
@@ -63,6 +109,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `PATCH /api/notifications/{id}/read` - Mark notification as read
 - `PATCH /api/notifications/mark-all-read` - Mark all as read
 - `POST /api/notifications` - Create notification (Admin only)
+- `GET /api/notifications/test-claims` - Test JWT claims (Debug)
 
 ### Debug (Dev Only)
 - `GET /api/debug/users` - List all users
@@ -104,9 +151,78 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2024-01-17T10:00:00Z",
+  "expiresIn": 86400
 }
 ```
+
+**Note:** Token is valid for 24 hours (1440 minutes).
+
+---
+
+### Refresh Token (NEW)
+```http
+POST /api/auth/refresh
+Authorization: Bearer {current_token}
+```
+
+**Purpose:** Get a new token before the current one expires.
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2024-01-18T10:00:00Z",
+  "expiresIn": 86400
+}
+```
+
+**Note:** 
+- Requires a valid (but can be expiring) token
+- Returns a new 24-hour token
+- Use this to prevent session interruption
+
+**Example:**
+```javascript
+// Refresh token before it expires
+const response = await api.post('/auth/refresh');
+localStorage.setItem('token', response.data.token);
+localStorage.setItem('tokenExpiry', response.data.expiresAt);
+```
+
+---
+
+### Validate Token (NEW)
+```http
+GET /api/auth/validate
+Authorization: Bearer {token}
+```
+
+**Purpose:** Check if current token is valid and get user info.
+
+**Response (Valid):**
+```json
+{
+  "valid": true,
+  "userId": "abc-123-def-456",
+  "email": "admin@local",
+  "roles": ["Admin"]
+}
+```
+
+**Response (Invalid):**
+```json
+{
+  "valid": false,
+  "message": "Token validation failed"
+}
+```
+
+**Use Cases:**
+- Check token validity on app startup
+- Verify user session before critical operations
+- Debug authentication issues
 
 ---
 
@@ -420,6 +536,53 @@ Content-Type: application/json
 
 ---
 
+### Test Claims (Debug)
+```http
+GET /api/notifications/test-claims
+Authorization: Bearer {token}
+```
+
+**Purpose:** Debug JWT token claims to troubleshoot authentication issues.
+
+**Response:**
+```json
+{
+  "userId": "user-id-123",
+  "isAuthenticated": true,
+  "authenticationType": "Bearer",
+  "name": "admin@local",
+  "claims": [
+ {
+      "type": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
+      "value": "user-id-123"
+    },
+ {
+      "type": "sub",
+      "value": "user-id-123"
+ },
+    {
+      "type": "email",
+  "value": "admin@local"
+    },
+    {
+  "type": "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+"value": "Admin"
+    }
+  ]
+}
+```
+
+**Note:** This endpoint is available to all authenticated users in Development mode, and Admin only in Production.
+
+**Usage:**
+Use this endpoint to verify that your JWT token contains the correct claims. If you're experiencing authentication issues, check that your token includes at least one of these user ID claims:
+- `sub`
+- `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier`
+- `nameidentifier`
+- `uid`
+
+---
+
 ## 📅 Submission Endpoints
 
 ### Get My Submissions
@@ -428,11 +591,15 @@ GET /api/submissions/my
 Authorization: Bearer {token}
 ```
 
-**Response:**
+**Authorization:**
+- **Students:** See only their own submissions
+- **Admin/Advisor:** See all submissions
+
+**Response (Student):**
 ```json
 [
-  {
-    "id": 3,
+{
+  "id": 3,
     "studentId": "student-id-789",
     "dueDate": "2024-02-01T23:59:59Z",
  "status": "Pending"
@@ -440,7 +607,28 @@ Authorization: Bearer {token}
 ]
 ```
 
-**Note:** Requires `Student` role
+**Response (Admin/Advisor):**
+```json
+[
+  {
+    "id": 1,
+    "studentId": "student-id-123",
+    "dueDate": "2024-02-01T23:59:59Z",
+    "status": "Completed"
+  },
+  {
+    "id": 2,
+  "studentId": "student-id-456",
+    "dueDate": "2024-02-15T23:59:59Z",
+    "status": "Pending"
+  }
+]
+```
+
+**Note:** 
+- Changed in version 1.0.1
+- Previously restricted to Student role only
+- Now uses role-based filtering instead
 
 ---
 
@@ -497,6 +685,8 @@ GET /api/statistics/student/summary
 Authorization: Bearer {token}
 ```
 
+**Authorization:** Any authenticated user (returns current user's statistics)
+
 **Response:**
 ```json
 {
@@ -507,6 +697,8 @@ Authorization: Bearer {token}
 }
 ```
 
+**Note:** Returns statistics for the currently authenticated user, regardless of role.
+
 ---
 
 ### Advisor Summary
@@ -514,6 +706,8 @@ Authorization: Bearer {token}
 GET /api/statistics/advisor/summary
 Authorization: Bearer {token}
 ```
+
+**Authorization:** Requires `Advisor` or `Admin` role
 
 **Response:**
 ```json
@@ -532,6 +726,8 @@ GET /api/statistics/admin/overview
 Authorization: Bearer {token}
 ```
 
+**Authorization:** Requires `Admin` role
+
 **Response:**
 ```json
 {
@@ -541,7 +737,7 @@ Authorization: Bearer {token}
   "totalComments": 450,
   "recentActivity": [
     {
-      "id": 45,
+   "id": 45,
       "title": "Research Paper",
       "createdAt": "2024-01-16T15:20:00Z",
       "ownerUserId": "user-id-123"
@@ -549,6 +745,201 @@ Authorization: Bearer {token}
   ]
 }
 ```
+
+---
+
+## 👩‍🎓 Student Endpoints (Admin/Advisor)
+
+### Get All Students
+```http
+GET /api/students?search=john&page=1&pageSize=20
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `search` (optional): Search by email or username
+- `page` (optional, default: 1): Page number
+- `pageSize` (optional, default: 20): Items per page
+
+**Response:**
+```json
+{
+  "totalCount": 45,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 3,
+  "students": [
+    {
+      "id": "student-id-789",
+      "userName": "john.doe@university.edu",
+      "email": "john.doe@university.edu",
+      "emailConfirmed": true,
+      "documentCount": 5,
+      "pendingSubmissions": 2,
+      "hasAdvisor": true
+    }
+  ]
+}
+```
+
+**Note:** Requires `Admin` or `Advisor` role
+
+---
+
+### Get Student Details
+```http
+GET /api/students/{id}
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "id": "student-id-789",
+  "fullName": "Arda Yıldız",
+  "email": "arda.yildiz@university.edu",
+  "registrationNo": "20240001",
+  "department": "Computer Science",
+  "createdAt": "2024-01-10T09:00:00Z",
+  "advisorId": "user-id-456",
+  "status": "Active",
+  "comments": [
+    {
+      "id": 8,
+      "documentVersionId": 12,
+ "authorUserId": "user-id-456",
+      "content": "Please add more references",
+      "createdAt": "2024-01-16T09:15:00Z"
+    }
+  ]
+}
+```
+
+**Note:** Requires `Admin` or `Advisor` role
+
+---
+
+### Send Notification to Student
+```http
+POST /api/students/{id}/send-notification
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "title": "Document Review",
+  "message": "Your document has been reviewed. Please log in to see the comments."
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Notification sent to student"
+}
+```
+
+**Note:** Requires `Admin` or `Advisor` role
+
+**Error Responses:**
+
+404 Not Found:
+```json
+{
+  "error": "Student not found"
+}
+```
+
+400 Bad Request:
+```json
+{
+  "error": "User is not a student"
+}
+```
+
+500 Internal Server Error:
+```json
+{
+  "error": "Failed to send notification",
+  "details": "Title cannot be null or empty",
+  "innerError": "Parameter name: title"
+}
+```
+
+---
+
+### Send Bulk Notification
+
+````````markdown
+POST /api/students/send-notification-to-all
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "title": "Attention Required",
+  "message": "Please check your dashboard for important updates."
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Notification sent to all students"
+}
+```
+
+**Note:** Requires `Admin` role
+
+---
+
+### Get Students Without Advisor
+```http
+GET /api/students/without-advisor
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "student-id-790",
+    "fullName": "Mehmet Öztürk",
+    "email": "mehmet.ozturk@university.edu",
+    "registrationNo": "20240002",
+    "department": "Information Technology",
+    "createdAt": "2024-01-10T09:00:00Z",
+    "status": "Active"
+  }
+]
+```
+
+**Note:** Requires `Admin` or `Advisor` role
+
+---
+
+### Get Students With Pending Submissions
+```http
+GET /api/students/with-pending-submissions
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "student-id-789",
+    "fullName": "Arda Yıldız",
+    "email": "arda.yildiz@university.edu",
+    "registrationNo": "20240001",
+    "department": "Computer Science",
+    "createdAt": "2024-01-10T09:00:00Z",
+    "advisorId": "user-id-456",
+    "status": "Active",
+    "pendingSubmissions": 2
+  }
+]
+```
+
+**Note:** Requires `Admin` or `Advisor` role
 
 ---
 
@@ -794,105 +1185,291 @@ POST /api/debug/token/stu@local
 
 ---
 
-## 🔧 Configuration
+## 🔧 Troubleshooting
 
-### CORS
-Frontend must run on: `http://localhost:5173`
+### Common Errors and Solutions
 
-### File Upload
-- Max file size: 100MB
-- Supported: All file types
-- Storage: `wwwroot/uploads/`
+#### 1. 403 Forbidden on Statistics Endpoints
 
-### JWT Token
-- Expiry: 120 minutes (2 hours)
-- Algorithm: HMAC-SHA256
-- Claims: `sub`, `email`, `name`, `role`
+**Error:**
+```
+Failed to load resource: the server responded with a status of 403
+```
+
+**Solution:**
+- **Student Summary** (`/api/statistics/student/summary`) - No specific role required anymore. Any authenticated user can access their own statistics.
+- **Advisor Summary** (`/api/statistics/advisor/summary`) - Requires `Advisor` or `Admin` role.
+- **Admin Overview** (`/api/statistics/admin/overview`) - Requires `Admin` role.
+
+Make sure you're logged in with the correct role.
 
 ---
 
-## 📚 Quick Examples
+#### 2. 500 Internal Server Error on Notifications
 
-### Complete Login Flow
+**Error:**
+```
+Failed to load resource: the server responded with a status of 500
+AxiosError
+```
+
+**Status:** ✅ **FIXED** (2025-01-06)
+
+**What Was Fixed:**
+1. Enhanced user ID extraction with multiple claim type fallbacks
+2. Added more claim types to JWT token generation
+3. Improved error handling - now returns 0 instead of 500 for better UX
+4. Added null checks throughout NotificationService
+5. Added `/api/notifications/test-claims` endpoint for debugging
+
+**Solution for Existing Users:**
+1. **Re-login** to get a new token with updated claims
+2. **Clear browser cache** if issues persist
+3. **Test your claims** using the new debug endpoint
+
+**Test Your Token:**
+```http
+GET /api/notifications/test-claims
+Authorization: Bearer {token}
+```
+
+If `userId` in response is null or empty, you need to re-login.
+
+**Updated Behavior:**
+- `/api/notifications/unread-count` now returns `{ "unreadCount": 0 }` even if error occurs
+- Better UX - UI doesn't break with 500 errors
+- Detailed backend logging for troubleshooting
+
+**Possible Causes (Historical):**
+1. User ID not found in JWT token claims ✅ Fixed
+2. Database connection issue (Check `/api/health/database`)
+3. Old token without proper claims ✅ Fixed - Re-login required
+
+**How to Verify Fix:**
 ```javascript
-// 1. Login
-const response = await fetch('https://localhost:7175/api/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: 'stu@local',
-    password: 'Arda123!'
-  })
+// 1. Check token claims
+const response = await fetch('/api/notifications/test-claims', {
+  headers: { 'Authorization': `Bearer ${token}` }
 });
-const { token } = await response.json();
+const data = await response.json();
+console.log('User ID:', data.userId); // Should not be null
 
-// 2. Store token
-localStorage.setItem('token', token);
-
-// 3. Use token in subsequent requests
-const docs = await fetch('https://localhost:7175/api/documents', {
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
+// 2. Check unread count
+const count = await fetch('/api/notifications/unread-count', {
+  headers: { 'Authorization': `Bearer ${token}` }
 });
+console.log(await count.json()); // Should return { unreadCount: N }
 ```
 
 ---
 
-### File Upload Example
-```javascript
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
-formData.append('notes', 'First draft');
+#### 3. TypeError: students.map is not a function
 
-await fetch(`https://localhost:7175/api/documents/5/versions`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`
-},
-  body: formData
-});
+**Error:**
+```javascript
+Uncaught TypeError: students.map is not a function
+```
+
+**Cause:**
+API response structure mismatch. The API now returns:
+```json
+{
+  "students": [...],  // Array is nested inside an object
+  "totalCount": 45,
+  "page": 1
+}
+```
+
+**Frontend Fix:**
+```javascript
+// ❌ Wrong
+const response = await api.get('/students');
+const students = response.data; // This is an object, not array
+students.map(...) // Error!",
+
+// ✅ Correct
+const response = await api.get('/students');
+const { students, totalCount, page, totalPages } = response.data;
+students.map(...) // Works!
+
+// Or
+const studentsArray = response.data.students;
+studentsArray.map(...) // Works!
 ```
 
 ---
 
-### File Download Example
-```javascript
-const response = await fetch(
-  `https://localhost:7175/api/documents/download/12`,
-  {
-    headers: { 'Authorization': `Bearer ${token}` }
-  }
-);
+# Storage Management Endpoints
 
-const blob = await response.blob();
-const url = window.URL.createObjectURL(blob);
-const a = document.createElement('a');
-a.href = url;
-a.download = 'document.pdf';
-a.click();
+## Overview
+The Storage Management API allows administrators to manage storage configurations, view storage statistics, and handle files (list, check existence, cleanup orphaned files).
+
+All endpoints require `Admin` role.
+
+---
+
+## 🔍 Storage Info Endpoints
+
+### Get Storage Configuration Info
+```http
+GET /api/storage/info
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "provider": "AzureBlob",
+  "containerName": "advisorysystemstorage",
+  "baseUrl": "https://advisorysystemstorage.blob.core.windows.net/"
+}
 ```
 
 ---
 
-## 🚀 Testing with Swagger
+## 📊 Storage Statistics Endpoints
 
-Access Swagger UI at: `https://localhost:7175/swagger`
+### Get Storage Statistics
+```http
+GET /api/storage/statistics
+Authorization: Bearer {token}
+```
 
-1. Click **Authorize** button (top right)
-2. Enter token without "Bearer " prefix
-3. Click **Authorize** then **Close**
-4. All endpoints now authenticated
+**Response:**
+```json
+{
+  "totalUsedSpace": 52428800,
+  "totalAvailableSpace": 2147483648,
+  "totalFiles": 120,
+  "recentFiles": [
+    {
+      "name": "doc_123_thesis.pdf",
+      "size": 2048576,
+      "lastModified": "2024-01-15T14:20:00Z"
+    }
+  ]
+}
+```
 
 ---
 
-## 📞 Support
+## 📁 File Management Endpoints
 
-- **Repository:** https://github.com/4RD4024N/AdvisorySystem.Api
-- **Issues:** Create issue on GitHub
-- **Documentation:** This file
+### List All Files
+```http
+GET /api/storage/files?prefix=doc_
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `prefix` (optional): Filter files by prefix
+
+**Response:**
+```json
+{
+  "count": 2,
+  "files": [
+    "https://advisorysystemstorage.blob.core.windows.net/documents/doc_123_thesis.pdf",
+    "https://advisorysystemstorage.blob.core.windows.net/documents/doc_456_report.docx"
+  ]
+}
+```
+
+**Note:** 
+- `files` field is always an array (never null)
+- Empty result returns `{ "count": 0, "files": [] }`
+- Safe for frontend `.slice()` operations
+
+**Error Response:**
+```json
+{
+  "error": "Failed to list files",
+  "details": "Connection timeout"
+}
+```
 
 ---
 
-**Last Updated:** 2025-01-06  
-**Maintained by:** Advisory System Team
+### Check File Exists
+```http
+GET /api/storage/exists?fileName=doc_123_thesis.pdf
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "exists": true
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "File not found"
+}
+```
+
+---
+
+### Clean Up Orphaned Files
+```http
+DELETE /api/storage/cleanup-orphaned
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "message": "Orphaned files cleaned up successfully",
+  "deletedFiles": 10
+}
+```
+
+**Note:** This operation permanently deletes files. Use with caution.
+
+---
+
+## 🛠 Troubleshooting Storage Issues
+
+### Common Errors and Solutions
+
+#### 1. 403 Forbidden on Storage Endpoints
+
+**Error:**
+```
+Failed to load resource: the server responded with a status of 403
+```
+
+**Solution:**
+- Ensure your user role has `Admin` permissions.
+- Check if the JWT token is valid and not expired.
+
+---
+
+#### 2. 404 Not Found on Files
+
+**Error:**
+```
+Failed to load resource: the server responded with a status of 404
+```
+
+**Solution:**
+- Verify the file ID or name is correct.
+- Check if the file still exists in the storage.
+
+---
+
+#### 3. 500 Internal Server Error on Storage Operations
+
+**Error:**
+```
+Failed to load resource: the server responded with a status of 500
+AxiosError
+```
+
+**Solution:**
+- Try the request again later. This may be a temporary issue.
+- Contact support if the problem persists.
+
+---

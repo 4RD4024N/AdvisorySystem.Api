@@ -74,33 +74,137 @@ public class AuthController : ControllerBase
         }
 
         var token = await GenerateTokenAsync(user);
-        return Ok(new { token });
+        var expiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpiresMinutes"]!));
+        
+        return Ok(new { 
+       token = token,
+ expiresAt = expiresAt,
+            expiresIn = int.Parse(_config["Jwt:ExpiresMinutes"]!) * 60 // seconds
+        });
+    }
+
+    // Yeni: Token yenileme endpoint'i
+    [HttpPost("refresh")]
+    [Authorize]
+    public async Task<IActionResult> RefreshToken()
+    {
+  try
+        {
+    // Mevcut kullanıcıyı token'dan al
+  var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+   ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub)
+         ?? User.FindFirstValue("sub");
+
+  if (string.IsNullOrEmpty(userId))
+      {
+         _logger.LogWarning("Refresh token failed: user ID not found in claims");
+   return Unauthorized(new { error = "Invalid token" });
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+      if (user == null)
+ {
+   _logger.LogWarning("Refresh token failed: user {UserId} not found", userId);
+              return Unauthorized(new { error = "User not found" });
+     }
+
+     // Yeni token oluştur
+            var newToken = await GenerateTokenAsync(user);
+            var expiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpiresMinutes"]!));
+
+    _logger.LogInformation("Token refreshed for user {UserId}", userId);
+
+  return Ok(new { 
+          token = newToken,
+        expiresAt = expiresAt,
+  expiresIn = int.Parse(_config["Jwt:ExpiresMinutes"]!) * 60
+      });
+      }
+    catch (Exception ex)
+        {
+         _logger.LogError(ex, "Failed to refresh token");
+   return StatusCode(500, new { error = "Failed to refresh token" });
+        }
+    }
+
+// Yeni: Token validation endpoint
+    [HttpGet("validate")]
+    [Authorize]
+    public async Task<IActionResult> ValidateToken()
+    {
+        try
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+      ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+   if (string.IsNullOrEmpty(userId))
+{
+      return Ok(new { valid = false, message = "User ID not found" });
+   }
+
+            var user = await _userManager.FindByIdAsync(userId);
+   if (user == null)
+ {
+      return Ok(new { valid = false, message = "User not found" });
+}
+
+ var roles = await _userManager.GetRolesAsync(user);
+
+ return Ok(new { 
+          valid = true,
+   userId = user.Id,
+                email = user.Email,
+          roles = roles
+    });
+        }
+        catch
+        {
+ return Ok(new { valid = false, message = "Token validation failed" });
+        }
     }
 
     private async Task<string> GenerateTokenAsync(AppUser user)
     {
-        var jwt = _config.GetSection("Jwt");
+    var jwt = _config.GetSection("Jwt");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
 
         var roles = await _userManager.GetRolesAsync(user);
+        
+  // Add multiple claim types for better compatibility
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
+      // Standard JWT claims
+ new(JwtRegisteredClaimNames.Sub, user.Id),
             new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new(ClaimTypes.Name, user.UserName ?? "")
-        };
+  new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+   new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+         
+      // Additional claims for compatibility
+         new(ClaimTypes.NameIdentifier, user.Id),
+ new(ClaimTypes.Name, user.UserName ?? ""),
+       new(ClaimTypes.Email, user.Email ?? ""),
+    
+            // Custom claim
+            new("uid", user.Id)
+ };
+      
+        // Add roles
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var expires = DateTime.UtcNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"]!));
 
         var token = new JwtSecurityToken(
-            issuer: jwt["Issuer"],
+      issuer: jwt["Issuer"],
             audience: jwt["Audience"],
-            claims: claims,
-            expires: expires,
-            signingCredentials: creds);
+      claims: claims,
+   expires: expires,
+          signingCredentials: creds);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+        
+        _logger.LogInformation("Token generated for user {UserId} with {RoleCount} roles", user.Id, roles.Count);
+        
+        return tokenString;
     }
 }
