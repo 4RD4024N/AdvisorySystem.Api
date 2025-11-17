@@ -122,4 +122,77 @@ public class DebugController : ControllerBase
  Errors = errors
  });
  }
+
+ // Yeni: Rolsüz kullanýcýlara Student rolü ata
+ [HttpPost("fix-missing-roles")]
+ [AllowAnonymous]
+ public async Task<IActionResult> FixMissingRoles()
+ {
+ var users = await _userManager.Users.ToListAsync();
+ var fixedCount = 0;
+ var alreadyHasRole = 0;
+ var errors = new List<string>();
+
+ foreach (var user in users)
+ {
+ var roles = await _userManager.GetRolesAsync(user);
+            
+ // Eðer hiç rolü yoksa Student rolü ata
+ if (!roles.Any())
+ {
+var result = await _userManager.AddToRoleAsync(user, "Student");
+ if (result.Succeeded)
+ {
+ fixedCount++;
+ }
+                else
+ {
+errors.Add($"{user.Email}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+ }
+}
+      else
+ {
+         alreadyHasRole++;
+ }
+ }
+
+        return Ok(new
+ {
+   message = "Missing roles fixed",
+ fixedCount = fixedCount,
+    alreadyHadRole = alreadyHasRole,
+      totalUsers = users.Count,
+   errors = errors
+        });
+    }
+
+    // Yeni: Rolsüz kullanýcýlarý listele
+    [HttpGet("users-without-roles")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetUsersWithoutRoles()
+    {
+    var users = await _userManager.Users.ToListAsync();
+   var usersWithoutRoles = new List<object>();
+
+        foreach (var user in users)
+    {
+  var roles = await _userManager.GetRolesAsync(user);
+  if (!roles.Any())
+            {
+        usersWithoutRoles.Add(new
+        {
+          user.Id,
+     user.UserName,
+            user.Email,
+     user.EmailConfirmed
+                });
+     }
+        }
+
+ return Ok(new
+        {
+       count = usersWithoutRoles.Count,
+         users = usersWithoutRoles
+        });
+ }
 }

@@ -118,6 +118,8 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `DELETE /api/debug/users/all` - Delete all users ⚠️
 - `GET /api/debug/seedinfo` - Seed info
 - `POST /api/debug/token/{email}` - Generate token
+- `GET /api/debug/users-without-roles` - List users without roles (NEW)
+- `POST /api/debug/fix-missing-roles` - Assign Student role to users without roles (NEW)
 
 ### Student Profile (NEW)
 - `GET /api/studentprofile/me` - Get my profile
@@ -155,7 +157,28 @@ Content-Type: application/json
 }
 ```
 
-**Response:** `200 OK` (empty)
+**Response:** `200 OK`
+
+```json
+{
+  "message": "Registration successful",
+  "userId": "abc-123-def-456"
+}
+```
+
+**Note:** 
+- Newly registered users are automatically assigned the **Student** role
+- If role assignment fails, user is still created but a warning is returned
+- Email is used as username
+
+**Error Response (Role Assignment Failed):**
+```json
+{
+  "message": "User created but role assignment failed. Please contact administrator.",
+  "userId": "abc-123-def-456",
+  "warning": "Student role not assigned"
+}
+```
 
 ---
 
@@ -1650,6 +1673,90 @@ POST /api/debug/token/stu@local
 
 ---
 
+### Get Users Without Roles (NEW)
+```http
+GET /api/debug/users-without-roles
+```
+
+**Purpose:** Find users that were registered but don't have any role assigned
+
+**Response:**
+```json
+{
+  "count": 3,
+  "users": [
+    {
+      "id": "user-id-123",
+      "userName": "student1@example.com",
+      "email": "student1@example.com",
+      "emailConfirmed": false
+    },
+    {
+"id": "user-id-456",
+      "userName": "student2@example.com",
+      "email": "student2@example.com",
+      "emailConfirmed": false
+    }
+  ]
+}
+```
+
+**Use Case:** 
+- Identify users registered before the automatic role assignment was implemented
+- Troubleshoot "user not appearing in student list" issues
+
+---
+
+### Fix Missing Roles (NEW)
+```http
+POST /api/debug/fix-missing-roles
+```
+
+**Purpose:** Automatically assign **Student** role to all users without any role
+
+**Response:**
+```json
+{
+  "message": "Missing roles fixed",
+  "fixedCount": 5,
+  "alreadyHadRole": 10,
+  "totalUsers": 15,
+  "errors": []
+}
+```
+
+**What it does:**
+1. Finds all users in the system
+2. Checks each user's roles
+3. If user has no roles, assigns "Student" role
+4. Returns statistics of fixed users
+
+**Use Case:**
+- Fix legacy users registered before automatic role assignment
+- Bulk fix after database issues
+- Resolve "students not visible to admin" problems
+
+**Error Response:**
+```json
+{
+  "message": "Missing roles fixed",
+  "fixedCount": 4,
+  "alreadyHadRole": 10,
+  "totalUsers": 15,
+  "errors": [
+    "user@example.com: Role 'Student' does not exist"
+  ]
+}
+```
+
+**⚠️ Important Notes:**
+- This endpoint is for **development/troubleshooting only**
+- Should be removed or restricted in production
+- Only assigns "Student" role (not Advisor or Admin)
+- Safe to run multiple times (idempotent)
+
+---
+
 ## 📝 Common Response Codes
 
 | Code | Description |
@@ -1906,49 +2013,5 @@ Authorization: Bearer {token}
 ```
 
 **Note:** This operation permanently deletes files. Use with caution.
-
----
-
-## 🛠 Troubleshooting Storage Issues
-
-### Common Errors and Solutions
-
-#### 1. 403 Forbidden on Storage Endpoints
-
-**Error:**
-```
-Failed to load resource: the server responded with a status of 403
-```
-
-**Solution:**
-- Ensure your user role has `Admin` permissions.
-- Check if the JWT token is valid and not expired.
-
----
-
-#### 2. 404 Not Found on Files
-
-**Error:**
-```
-Failed to load resource: the server responded with a status of 404
-```
-
-**Solution:**
-- Verify the file ID or name is correct.
-- Check if the file still exists in the storage.
-
----
-
-#### 3. 500 Internal Server Error on Storage Operations
-
-**Error:**
-```
-Failed to load resource: the server responded with a status of 500
-AxiosError
-```
-
-**Solution:**
-- Try the request again later. This may be a temporary issue.
-- Contact support if the problem persists.
 
 ---

@@ -46,13 +46,22 @@ public class AuthController : ControllerBase
             return BadRequest(result.Errors);
         }
 
-        // Varsayılan rol: Student (yoksa atlama)
-        if (await _userManager.IsInRoleAsync(user, "Student") == false)
+        // Varsayılan rol olarak Student ata
+        var roleResult = await _userManager.AddToRoleAsync(user, "Student");
+        if (!roleResult.Succeeded)
         {
-            // Role yoksa oluştur
-            // (Startup'ta seeding de yapabiliriz; burada hızlıca kontrol)
+            _logger.LogWarning("Failed to assign Student role to {Email}: {Errors}", 
+                                dto.Email, string.Join(';', roleResult.Errors.Select(e => e.Description)));
+            // Role atanamadı ama kullanıcı oluşturuldu, uyarı döndür
+            return Ok(new { 
+                message = "User created but role assignment failed. Please contact administrator.",
+                userId = user.Id,
+                warning = "Student role not assigned"
+            });
         }
-        return Ok();
+
+        _logger.LogInformation("User {Email} registered successfully with Student role", dto.Email);
+        return Ok(new { message = "Registration successful", userId = user.Id });
     }
 
     [HttpPost("login")]
