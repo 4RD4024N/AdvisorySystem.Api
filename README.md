@@ -62,6 +62,24 @@
 - Sayfalama desteği
 - Popüler tag'ler
 
+### 10. Öğrenci Profil ve Ön Koşul Kontrolü (YENİ)
+- Öğrenci profil yönetimi (öğrenci no, bölüm, GPA, tamamlanan krediler)
+- Otomatik ön koşul kontrolü (MNK - Minimum Nitelik Kontrolü)
+- Ders tamamlama takibi
+- Proje alma yeterliliği kontrolü
+
+### 11. Danışman Değerlendirme ve Puanlama (YENİ)
+- Doküman versiyonlarına 1-100 arası puanlama
+- Danışman yorumları
+- Ortalama puan hesaplama
+- Öğrenci performans takibi
+
+### 12. PDF Ön İzleme (YENİ)
+- Tarayıcıda doğrudan PDF görüntüleme
+- İndirmeye gerek kalmadan dosya önizleme
+- Dosya metadata bilgileri
+- PDF.js entegrasyonu desteği
+
 ---
 
 ## 🛠️ Teknoloji Stack

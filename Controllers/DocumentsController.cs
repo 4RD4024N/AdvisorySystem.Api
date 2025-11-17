@@ -127,5 +127,112 @@ namespace AdvisorySystem.Api.Controllers
             var stream = _storage.Open(v.StoragePath);
             return File(stream, v.ContentType, fileDownloadName: v.FileName);
         }
+
+        // PDF Ön izleme - dosyayı inline göster
+        [HttpGet("preview/{versionId:int}")]
+        [Authorize]
+        public async Task<IActionResult> PreviewPdf(int versionId)
+        {
+            try
+            {
+                var v = await _db.DocumentVersions.FindAsync(versionId);
+                if (v is null)
+                    return NotFound(new { error = "Document version not found" });
+
+                // Check if file is PDF
+                if (!v.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new
+                    {
+                        error = "Only PDF files can be previewed",
+                        contentType = v.ContentType,
+                        message = "Please download the file to view it"
+                    });
+                }
+
+                // Check authorization - owner, advisor, or admin
+                var uid = GetUserId();
+                var doc = await _db.Documents.FindAsync(v.DocumentId);
+                if (doc == null) return NotFound();
+
+                if (uid != doc.OwnerUserId && uid != doc.AdvisorUserId && !User.IsInRole("Admin"))
+                    return Forbid();
+
+                var stream = _storage.Open(v.StoragePath);
+      
+                // Return with inline disposition for browser preview
+                return File(stream, "application/pdf", v.FileName, enableRangeProcessing: true);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Failed to preview document",
+                    details = ex.Message
+                });
+            }
+        }
+
+        // Get document metadata (for PDF.js or other viewers)
+        [HttpGet("metadata/{versionId:int}")]
+        [Authorize]
+        public async Task<IActionResult> GetDocumentMetadata(int versionId)
+        {
+            try
+            {
+                var v = await _db.DocumentVersions
+                    .Include(dv => dv.Document)
+                    .FirstOrDefaultAsync(dv => dv.Id == versionId);
+
+                if (v == null)
+                    return NotFound(new { error = "Document version not found" });
+
+                // Check authorization
+                var uid = GetUserId();
+                if (uid != v.Document.OwnerUserId && uid != v.Document.AdvisorUserId && !User.IsInRole("Admin"))
+                    return Forbid();
+
+                return Ok(new
+                {
+                    v.Id,
+                    v.FileName,
+                    v.ContentType,
+                    v.Size,
+                    sizeFormatted = FormatFileSize(v.Size),
+                    v.VersionNo,
+                    v.CreatedAt,
+                    v.Notes,
+                    documentId = v.Document.Id,
+                    documentTitle = v.Document.Title,
+                    isPdf = v.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase),
+                    canPreview = v.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase),
+                    downloadUrl = $"/api/documents/download/{v.Id}",
+                    previewUrl = v.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase)
+                        ? $"/api/documents/preview/{v.Id}"
+                        : null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Failed to get metadata",
+                    details = ex.Message
+                });
+            }
+        }
+
+        private static string FormatFileSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
+        }
     }
 }

@@ -55,6 +55,8 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `POST /api/documents/{id}/versions` - Upload file version
 - `GET /api/documents/{id}/versions` - Get versions list
 - `GET /api/documents/download/{versionId}` - Download file
+- `GET /api/documents/preview/{versionId}` - Preview PDF file (NEW)
+- `GET /api/documents/metadata/{versionId}` - Get file metadata (NEW)
 
 ### Advisors
 - `GET /api/advisors` - Get all advisors
@@ -116,6 +118,26 @@ Authorization: Bearer YOUR_JWT_TOKEN
 - `DELETE /api/debug/users/all` - Delete all users ⚠️
 - `GET /api/debug/seedinfo` - Seed info
 - `POST /api/debug/token/{email}` - Generate token
+
+### Student Profile (NEW)
+- `GET /api/studentprofile/me` - Get my profile
+- `POST /api/studentprofile` - Create or update profile
+- `GET /api/studentprofile/{studentId}` - Get profile by student ID (Admin/Advisor)
+- `GET /api/studentprofile/check-prerequisites` - Check if prerequisites are met
+
+### Course Requirements (NEW)
+- `GET /api/course/requirements` - Get all course requirements
+- `POST /api/course/requirements` - Add course requirement (Admin)
+- `GET /api/course/my-courses` - Get my completed courses
+- `POST /api/course/my-courses` - Add course to my record
+- `PATCH /api/course/my-courses/{id}` - Update course completion
+
+### Document Ratings (NEW)
+- `POST /api/ratings` - Create or update rating (Advisor/Admin)
+- `GET /api/ratings/version/{versionId}` - Get ratings for document version
+- `GET /api/ratings/by-advisor/{advisorId}` - Get all ratings by advisor
+- `GET /api/ratings/my-documents` - Get ratings for my documents (Student)
+- `DELETE /api/ratings/{id}` - Delete rating
 
 ---
 
@@ -324,55 +346,232 @@ Authorization: Bearer {token}
 
 ---
 
-## 👨‍🏫 Advisor Endpoints
-
-### Get All Advisors
+### Preview Document (NEW)
 ```http
-GET /api/advisors
+GET /api/documents/preview/{versionId}
+Authorization: Bearer {token}
+```
+
+**Purpose:** Display PDF in browser without downloading
+
+**Authorization:** Document owner, assigned advisor, or Admin
+
+**Response:** PDF file stream (inline disposition)
+
+**Error Responses:**
+
+400 Bad Request (Non-PDF file):
+```json
+{
+  "error": "Only PDF files can be previewed",
+  "contentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "message": "Please download the file to view it"
+}
+```
+
+**Frontend Example:**
+```html
+<!-- Embed PDF in iframe -->
+<iframe 
+  src="https://localhost:7175/api/documents/preview/12?token=YOUR_TOKEN" 
+  width="100%" 
+  height="600px">
+</iframe>
+
+<!-- Or use PDF.js -->
+<div id="pdf-viewer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const url = 'https://localhost:7175/api/documents/preview/12';
+pdfjsLib.getDocument({
+  url: url,
+  httpHeaders: { 'Authorization': `Bearer ${token}` }
+}).promise.then(pdf => {
+  // Render PDF
+});
+</script>
+```
+
+---
+
+### Get Document Metadata
+```http
+GET /api/documents/metadata/{versionId}
+Authorization: Bearer {token}
+```
+
+**Purpose:** Get file information without downloading
+
+**Response:**
+```json
+{
+  "id": 12,
+  "fileName": "thesis_final.pdf",
+  "contentType": "application/pdf",
+  "size": 2048576,
+  "sizeFormatted": "2 MB",
+  "versionNo": 3,
+  "createdAt": "2024-01-15T14:20:00Z",
+  "notes": "Final version with corrections",
+  "documentId": 5,
+  "documentTitle": "My Thesis",
+  "isPdf": true,
+  "canPreview": true,
+  "downloadUrl": "/api/documents/download/12",
+  "previewUrl": "/api/documents/preview/12"
+}
+```
+
+**Non-PDF File Response:**
+```json
+{
+  "id": 13,
+  "fileName": "data.xlsx",
+  "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "size": 512000,
+  "sizeFormatted": "500 KB",
+  "isPdf": false,
+  "canPreview": false,
+  "downloadUrl": "/api/documents/download/13",
+  "previewUrl": null
+}
+```
+
+---
+
+## 🎓 Student Profile Endpoints (NEW)
+
+### Get My Profile
+```http
+GET /api/studentprofile/me
 Authorization: Bearer {token}
 ```
 
 **Response:**
 ```json
-[
-  {
-    "id": "user-id-123",
-    "userName": "dr.smith@university.edu",
-    "email": "dr.smith@university.edu"
-  }
-]
+{
+  "id": 1,
+  "userId": "student-id-123",
+  "userName": "john.doe@university.edu",
+  "studentNumber": "20240001",
+  "department": "Computer Science",
+  "gpa": 3.75,
+  "completedCredits": 120,
+  "enrollmentDate": "2020-09-01T00:00:00Z",
+  "meetsPrerequisites": true,
+  "createdAt": "2024-01-10T09:00:00Z",
+  "updatedAt": "2024-01-15T14:30:00Z"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "error": "Profile not found"
+}
 ```
 
 ---
 
-### Assign Advisor
+### Create or Update Profile
 ```http
-POST /api/advisors/assign
+POST /api/studentprofile
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "documentId": 5,
-  "advisorUserId": "user-id-123"
+  "studentNumber": "20240001",
+  "department": "Computer Science",
+  "gpa": 3.75,
+  "completedCredits": 120,
+  "enrollmentDate": "2020-09-01T00:00:00Z"
 }
 ```
 
 **Response:**
 ```json
 {
-  "message": "Advisor assigned successfully"
+  "message": "Profile saved successfully",
+  "id": 1,
+  "userId": "student-id-123"
 }
 ```
 
-**Note:** Requires `Admin` or `Advisor` role
+**Note:** All fields are optional. Updates existing profile or creates new one.
 
 ---
 
-## 💬 Comment Endpoints
-
-### Get Comments by Version
+### Get Profile by Student ID (Admin/Advisor)
 ```http
-GET /api/comments/version/{versionId}
+GET /api/studentprofile/{studentId}
+Authorization: Bearer {token}
+```
+
+**Authorization:** Requires `Admin` or `Advisor` role
+
+**Response:**
+```json
+{
+  "id": 1,
+  "userId": "student-id-123",
+  "userName": "john.doe@university.edu",
+  "email": "john.doe@university.edu",
+  "studentNumber": "20240001",
+  "department": "Computer Science",
+  "gpa": 3.75,
+  "completedCredits": 120,
+  "enrollmentDate": "2020-09-01T00:00:00Z",
+  "meetsPrerequisites": true,
+  "createdAt": "2024-01-10T09:00:00Z",
+  "updatedAt": "2024-01-15T14:30:00Z"
+}
+```
+
+---
+
+### Check Prerequisites
+```http
+GET /api/studentprofile/check-prerequisites
+Authorization: Bearer {token}
+```
+
+**Purpose:** Check if student meets course and credit requirements for project eligibility
+
+**Response (Meets Requirements):**
+```json
+{
+  "meetsPrerequisites": true,
+  "completedCredits": 120,
+  "requiredCredits": 90,
+  "completedCoursesCount": 15,
+  "requiredCoursesCount": 12,
+  "missingCredits": 0,
+  "gpa": 3.75,
+  "message": "✅ You meet all prerequisites!"
+}
+```
+
+**Response (Missing Requirements):**
+```json
+{
+  "meetsPrerequisites": false,
+  "completedCredits": 75,
+  "requiredCredits": 90,
+  "completedCoursesCount": 10,
+  "requiredCoursesCount": 12,
+  "missingCredits": 15,
+  "gpa": 3.45,
+  "message": "❌ Missing 15 credits"
+}
+```
+
+---
+
+## 📚 Course Requirements Endpoints (NEW)
+
+### Get All Course Requirements
+```http
+GET /api/course/requirements
 Authorization: Bearer {token}
 ```
 
@@ -380,53 +579,333 @@ Authorization: Bearer {token}
 ```json
 [
   {
-    "id": 8,
-    "documentVersionId": 12,
- "authorUserId": "user-id-456",
-    "content": "Please add more references",
-    "createdAt": "2024-01-16T09:15:00Z"
+    "id": 1,
+    "courseName": "Data Structures",
+    "courseCode": "CS201",
+    "credits": 6,
+    "isRequired": true,
+    "description": "Fundamental data structures and algorithms"
+  },
+  {
+    "id": 2,
+    "courseName": "Database Systems",
+    "courseCode": "CS301",
+    "credits": 6,
+    "isRequired": true,
+    "description": "Relational database design and SQL"
   }
 ]
 ```
 
 ---
 
-### Create Comment
+### Add Course Requirement (Admin)
 ```http
-POST /api/comments
+POST /api/course/requirements
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "courseName": "Software Engineering",
+  "courseCode": "CS401",
+"credits": 8,
+  "isRequired": true,
+  "description": "Software development methodologies and practices"
+}
+```
+
+**Authorization:** Requires `Admin` role
+
+**Response:**
+```json
+{
+  "message": "Course requirement added",
+  "id": 3
+}
+```
+
+---
+
+### Get My Courses
+```http
+GET /api/course/my-courses
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "courseRequirementId": 1,
+    "courseName": "Data Structures",
+    "courseCode": "CS201",
+    "credits": 6,
+    "isCompleted": true,
+    "grade": 85.5,
+    "completionDate": "2023-06-15T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "courseRequirementId": 2,
+    "courseName": "Database Systems",
+    "courseCode": "CS301",
+"credits": 6,
+    "isCompleted": false,
+    "grade": null,
+    "completionDate": null
+  }
+]
+```
+
+---
+
+### Add Course to My Record
+```http
+POST /api/course/my-courses
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "courseRequirementId": 1,
+  "isCompleted": true,
+  "grade": 85.5,
+  "completionDate": "2023-06-15T00:00:00Z"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Course added successfully",
+  "id": 1
+}
+```
+
+**Note:** 
+- Automatically updates student profile's completed credits
+- Cannot add the same course twice
+
+**Error Responses:**
+
+404 Not Found:
+```json
+{
+  "error": "Course requirement not found"
+}
+```
+
+400 Bad Request:
+```json
+{
+  "error": "Course already added"
+}
+```
+
+---
+
+### Update Course Completion
+```http
+PATCH /api/course/my-courses/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "isCompleted": true,
+  "grade": 90.0,
+  "completionDate": "2023-06-15T00:00:00Z"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Course updated successfully"
+}
+```
+
+**Note:** Marking course as completed automatically updates student profile's credit count
+
+---
+
+## ⭐ Document Rating Endpoints (NEW)
+
+### Create or Update Rating
+```http
+POST /api/ratings
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
   "documentVersionId": 12,
-  "content": "Great work! Just minor revisions needed."
+  "score": 85,
+  "comments": "Excellent work! Well-researched and clearly written. Minor improvements needed in the conclusion."
 }
 ```
 
-**Response:**
+**Authorization:** Requires `Advisor` or `Admin` role
+
+**Validation:**
+- Score must be between 1-100
+- Only assigned advisor or admin can rate
+- Updates existing rating if already rated
+
+**Response (Created):**
 ```json
 {
-  "id": 9,
-  "createdAt": "2024-01-16T10:30:00Z"
+  "message": "Rating created successfully",
+  "ratingId": 1,
+  "score": 85
+}
+```
+
+**Response (Updated):**
+```json
+{
+  "message": "Rating updated successfully",
+  "ratingId": 1,
+  "score": 90
+}
+```
+
+**Error Responses:**
+
+400 Bad Request:
+```json
+{
+  "error": "Score must be between 1 and 100"
+}
+```
+
+403 Forbidden:
+```json
+{
+  "error": "You are not authorized to rate this document"
 }
 ```
 
 ---
 
-### Delete Comment
+### Get Ratings for Document Version
 ```http
-DELETE /api/comments/{id}
+GET /api/ratings/version/{versionId}
 Authorization: Bearer {token}
 ```
+
+**Response (Has Ratings):**
+```json
+{
+  "hasRating": true,
+  "averageScore": 87.5,
+  "ratingCount": 2,
+  "ratings": [
+    {
+      "id": 1,
+      "documentVersionId": 12,
+    "advisorUserId": "advisor-id-456",
+      "score": 85,
+    "comments": "Good work overall",
+      "createdAt": "2024-01-15T10:00:00Z"
+    },
+  {
+      "id": 2,
+      "documentVersionId": 12,
+      "advisorUserId": "advisor-id-789",
+"score": 90,
+      "comments": "Excellent research",
+      "createdAt": "2024-01-16T14:30:00Z"
+    }
+  ]
+}
+```
+
+**Response (No Ratings):**
+```json
+{
+  "hasRating": false,
+  "averageScore": null,
+  "ratings": []
+}
+```
+
+---
+
+### Get Ratings by Advisor
+```http
+GET /api/ratings/by-advisor/{advisorId}
+Authorization: Bearer {token}
+```
+
+**Authorization:** Admin or the advisor themselves
 
 **Response:**
 ```json
 {
-  "message": "Comment deleted"
+  "totalRatings": 15,
+  "averageScore": 82.5,
+  "ratings": [
+    {
+      "id": 1,
+  "documentVersionId": 12,
+   "documentTitle": "Thesis Draft",
+      "versionNo": 3,
+      "score": 85,
+      "comments": "Well done",
+      "createdAt": "2024-01-15T10:00:00Z"
+    }
+  ]
 }
 ```
 
-**Note:** Only comment author or Admin can delete
+---
+
+### Get Ratings for My Documents (Student)
+```http
+GET /api/ratings/my-documents
+Authorization: Bearer {token}
+```
+
+**Purpose:** Student can see all ratings received on their documents
+
+**Response:**
+```json
+[
+  {
+    "id": 12,
+    "documentId": 5,
+    "documentTitle": "My Thesis",
+    "versionNo": 3,
+    "ratings": [
+      {
+        "id": 1,
+        "advisorUserId": "advisor-id-456",
+        "score": 85,
+    "comments": "Good progress",
+   "createdAt": "2024-01-15T10:00:00Z"
+      }
+    ]
+  }
+]
+```
+
+**Note:** Only includes document versions that have ratings
+
+---
+
+### Delete Rating
+```http
+DELETE /api/ratings/{id}
+Authorization: Bearer {token}
+```
+
+**Authorization:** Admin or rating author
+
+**Response:**
+```json
+{
+  "message": "Rating deleted successfully"
+}
+```
 
 ---
 
