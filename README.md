@@ -629,6 +629,8 @@ az container create --resource-group AdvisorySystemRG \
 
 ## 📚 Dokümantasyon
 
+- **Technology Stack:** [TECHNOLOGY_STACK.md](TECHNOLOGY_STACK.md)
+- **Presentation Summary:** [PRESENTATION_SUMMARY.md](PRESENTATION_SUMMARY.md)
 - **Use Cases & Requirements:** [USE_CASE_SUMMARY.md](USE_CASE_SUMMARY.md)
 - **API Guide:** [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
 - **Students API:** [STUDENTS_API_GUIDE.md](STUDENTS_API_GUIDE.md)
