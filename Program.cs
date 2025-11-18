@@ -37,14 +37,18 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// CORS (frontend: Vite 5173)
+// CORS (frontend: Vite 5173, 5174)
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("frontend", p => p
-        .WithOrigins("http://localhost:5173", "http://localhost:3000") 
-  .AllowAnyHeader()
+.WithOrigins(
+        "http://localhost:5173", 
+    "http://localhost:5174",
+ "http://localhost:3000"
+        ) 
+        .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials());
+.AllowCredentials());
 });
 
 // JWT
