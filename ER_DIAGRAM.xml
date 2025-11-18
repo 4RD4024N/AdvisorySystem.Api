@@ -1,0 +1,553 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EntityRelationshipDiagram>
+  <Metadata>
+    <Project>Advisory System</Project>
+    <Version>2.0.0</Version>
+    <DatabaseEngine>SQL Server</DatabaseEngine>
+    <Framework>.NET 8</Framework>
+    <CreatedDate>2025-01-18</CreatedDate>
+  </Metadata>
+
+  <!-- Entities Definition -->
+  <Entities>
+    
+  <!-- Identity Entity -->
+    <Entity name="AppUser" type="Identity" category="Core">
+      <Description>System users (Student, Advisor, Admin) managed by ASP.NET Identity</Description>
+      <Attributes>
+        <Attribute name="Id" type="string" key="PK" nullable="false">
+          <Description>Primary key - GUID format</Description>
+        </Attribute>
+        <Attribute name="UserName" type="string" nullable="false">
+<Description>Email as username</Description>
+     </Attribute>
+        <Attribute name="Email" type="string" nullable="false">
+        <Description>User email address</Description>
+        </Attribute>
+ <Attribute name="PasswordHash" type="string" nullable="false">
+          <Description>Hashed password</Description>
+    </Attribute>
+        <Attribute name="EmailConfirmed" type="boolean" nullable="false">
+          <Description>Email verification status</Description>
+    </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+ <Description>Account creation timestamp</Description>
+        </Attribute>
+      </Attributes>
+      <Roles>
+        <Role>Student</Role>
+        <Role>Advisor</Role>
+      <Role>Admin</Role>
+      </Roles>
+  </Entity>
+
+    <!-- Document Entity -->
+ <Entity name="Document" type="Domain" category="Documents">
+      <Description>Student documents (thesis, projects, assignments)</Description>
+      <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+          <Description>Primary key - Auto increment</Description>
+    </Attribute>
+        <Attribute name="Title" type="string" nullable="false">
+ <Description>Document title</Description>
+        </Attribute>
+        <Attribute name="OwnerUserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (Student)</Description>
+<References entity="AppUser" attribute="Id"/>
+     </Attribute>
+ <Attribute name="AdvisorUserId" type="string" key="FK" nullable="true">
+          <Description>Foreign key to AppUser (Advisor) - Optional</Description>
+          <References entity="AppUser" attribute="Id"/>
+    </Attribute>
+      <Attribute name="Tags" type="string" nullable="true">
+          <Description>Comma-separated tags</Description>
+        </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+          <Description>Document creation timestamp</Description>
+        </Attribute>
+      </Attributes>
+    </Entity>
+
+    <!-- DocumentVersion Entity -->
+  <Entity name="DocumentVersion" type="Domain" category="Documents">
+      <Description>Document versions (each upload creates new version)</Description>
+   <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+          <Description>Primary key - Auto increment</Description>
+</Attribute>
+        <Attribute name="DocumentId" type="int" key="FK" nullable="false">
+          <Description>Foreign key to Document</Description>
+      <References entity="Document" attribute="Id"/>
+        </Attribute>
+        <Attribute name="VersionNo" type="int" nullable="false">
+          <Description>Version number (1, 2, 3...) per document</Description>
+        </Attribute>
+        <Attribute name="FileName" type="string" nullable="false">
+      <Description>Original file name</Description>
+  </Attribute>
+        <Attribute name="ContentType" type="string" nullable="false">
+          <Description>MIME type (application/pdf, etc.)</Description>
+      </Attribute>
+        <Attribute name="Size" type="long" nullable="false">
+       <Description>File size in bytes (max 10MB)</Description>
+        </Attribute>
+        <Attribute name="StoragePath" type="string" nullable="false">
+          <Description>Physical file path</Description>
+        </Attribute>
+      <Attribute name="UploadedByUserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (uploader)</Description>
+       <References entity="AppUser" attribute="Id"/>
+   </Attribute>
+        <Attribute name="Notes" type="string" nullable="true">
+      <Description>Version notes</Description>
+        </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+          <Description>Upload timestamp</Description>
+        </Attribute>
+      </Attributes>
+      <Constraints>
+        <UniqueConstraint columns="DocumentId, VersionNo">
+          <Description>Unique version number per document</Description>
+     </UniqueConstraint>
+      </Constraints>
+      <BusinessRules>
+        <Rule>Only last 2 versions displayed in UI</Rule>
+        <Rule>Max file size: 10MB</Rule>
+     <Rule>Allowed types: PDF, DOCX, PPTX</Rule>
+      </BusinessRules>
+    </Entity>
+
+    <!-- Comment Entity -->
+    <Entity name="Comment" type="Domain" category="Documents">
+  <Description>Comments on document versions</Description>
+    <Attributes>
+ <Attribute name="Id" type="int" key="PK" nullable="false">
+     <Description>Primary key - Auto increment</Description>
+        </Attribute>
+        <Attribute name="DocumentVersionId" type="int" key="FK" nullable="false">
+    <Description>Foreign key to DocumentVersion</Description>
+        <References entity="DocumentVersion" attribute="Id"/>
+        </Attribute>
+        <Attribute name="AuthorUserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (Advisor/Admin)</Description>
+ <References entity="AppUser" attribute="Id"/>
+        </Attribute>
+        <Attribute name="Content" type="string" nullable="false">
+     <Description>Comment content</Description>
+        </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+ <Description>Comment timestamp</Description>
+        </Attribute>
+      </Attributes>
+      <BusinessRules>
+        <Rule>Only Advisor and Admin can comment</Rule>
+        <Rule>Students can only read comments</Rule>
+      </BusinessRules>
+    </Entity>
+
+    <!-- Notification Entity -->
+    <Entity name="Notification" type="Domain" category="System">
+      <Description>User notifications</Description>
+      <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+        <Description>Primary key - Auto increment</Description>
+        </Attribute>
+        <Attribute name="UserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (recipient)</Description>
+     <References entity="AppUser" attribute="Id"/>
+        </Attribute>
+        <Attribute name="Title" type="string" nullable="false">
+          <Description>Notification title</Description>
+        </Attribute>
+        <Attribute name="Message" type="string" nullable="false">
+          <Description>Notification message</Description>
+        </Attribute>
+        <Attribute name="Type" type="int" nullable="false">
+          <Description>NotificationType enum (0-5)</Description>
+          <EnumValues>
+         <Value id="0">DeadlineApproaching</Value>
+<Value id="1">NewComment</Value>
+            <Value id="2">AdvisorAssigned</Value>
+            <Value id="3">DocumentUploaded</Value>
+            <Value id="4">SubmissionStatusChanged</Value>
+      <Value id="5">General</Value>
+          </EnumValues>
+  </Attribute>
+        <Attribute name="IsRead" type="boolean" nullable="false">
+          <Description>Read status</Description>
+     </Attribute>
+    <Attribute name="RelatedEntityId" type="string" nullable="true">
+      <Description>Soft reference to related entity (DocumentId, SubmissionId, etc.)</Description>
+    </Attribute>
+        <Attribute name="RelatedEntityType" type="string" nullable="true">
+          <Description>Entity type name (Document, Submission, etc.)</Description>
+        </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+          <Description>Notification timestamp</Description>
+        </Attribute>
+</Attributes>
+      <BusinessRules>
+        <Rule>Background service sends deadline reminders (3 days before)</Rule>
+   </BusinessRules>
+    </Entity>
+
+    <!-- Submission Entity -->
+    <Entity name="Submission" type="Domain" category="Academic">
+  <Description>Submission deadlines and statuses</Description>
+      <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+          <Description>Primary key - Auto increment</Description>
+        </Attribute>
+        <Attribute name="StudentId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (Student)</Description>
+      <References entity="AppUser" attribute="Id"/>
+        </Attribute>
+        <Attribute name="DocumentId" type="int" key="FK" nullable="true">
+          <Description>Foreign key to Document - Optional</Description>
+          <References entity="Document" attribute="Id"/>
+        </Attribute>
+      <Attribute name="DueDate" type="datetime" nullable="false">
+          <Description>Submission deadline</Description>
+  </Attribute>
+        <Attribute name="Status" type="string" nullable="false">
+          <Description>Status: Pending, Submitted, Late</Description>
+        </Attribute>
+        <Attribute name="SubmittedAt" type="datetime" nullable="true">
+    <Description>Actual submission timestamp</Description>
+</Attribute>
+   <Attribute name="Notes" type="string" nullable="true">
+          <Description>Additional notes</Description>
+        </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+       <Description>Creation timestamp</Description>
+        </Attribute>
+        <Attribute name="CreatedByUserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (Advisor/Admin who created)</Description>
+   <References entity="AppUser" attribute="Id"/>
+        </Attribute>
+      </Attributes>
+  <BusinessRules>
+        <Rule>Advisor can only create for own students</Rule>
+   <Rule>Admin can create for any student</Rule>
+        <Rule>Immediate notification sent on creation</Rule>
+        <Rule>Automatic reminder 3 days before deadline</Rule>
+      </BusinessRules>
+    </Entity>
+
+    <!-- StudentProfile Entity -->
+    <Entity name="StudentProfile" type="Domain" category="Academic">
+      <Description>Student profile information</Description>
+      <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+ <Description>Primary key - Auto increment</Description>
+        </Attribute>
+        <Attribute name="UserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (UNIQUE) - One-to-One</Description>
+          <References entity="AppUser" attribute="Id"/>
+    </Attribute>
+        <Attribute name="StudentNumber" type="string" nullable="true">
+      <Description>Student registration number</Description>
+</Attribute>
+      <Attribute name="Department" type="string" nullable="true">
+          <Description>Department name</Description>
+        </Attribute>
+    <Attribute name="GPA" type="double" nullable="true">
+       <Description>Grade point average</Description>
+     </Attribute>
+        <Attribute name="CompletedCredits" type="int" nullable="true">
+          <Description>Total completed credits</Description>
+        </Attribute>
+        <Attribute name="EnrollmentDate" type="datetime" nullable="true">
+          <Description>Enrollment date</Description>
+   </Attribute>
+        <Attribute name="MeetsPrerequisites" type="boolean" nullable="false">
+  <Description>Prerequisites met status</Description>
+        </Attribute>
+    <Attribute name="CreatedAt" type="datetime" nullable="false">
+          <Description>Profile creation timestamp</Description>
+     </Attribute>
+    <Attribute name="UpdatedAt" type="datetime" nullable="false">
+ <Description>Last update timestamp</Description>
+  </Attribute>
+      </Attributes>
+      <Constraints>
+ <UniqueConstraint columns="UserId">
+     <Description>One profile per user</Description>
+        </UniqueConstraint>
+      </Constraints>
+      <BusinessRules>
+        <Rule>CompletedCredits auto-calculated from StudentCourse</Rule>
+        <Rule>MeetsPrerequisites auto-updated</Rule>
+      </BusinessRules>
+    </Entity>
+
+ <!-- CourseRequirement Entity -->
+    <Entity name="CourseRequirement" type="Domain" category="Academic">
+      <Description>Course requirement definitions</Description>
+      <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+       <Description>Primary key - Auto increment</Description>
+    </Attribute>
+        <Attribute name="CourseName" type="string" nullable="false">
+    <Description>Course name</Description>
+        </Attribute>
+        <Attribute name="CourseCode" type="string" nullable="true">
+          <Description>Course code (e.g., CS201)</Description>
+        </Attribute>
+        <Attribute name="Credits" type="int" nullable="false">
+          <Description>Course credits</Description>
+   </Attribute>
+        <Attribute name="IsRequired" type="boolean" nullable="false">
+   <Description>Is this course required for project eligibility</Description>
+        </Attribute>
+      <Attribute name="Description" type="string" nullable="true">
+          <Description>Course description</Description>
+        </Attribute>
+      </Attributes>
+      <BusinessRules>
+ <Rule>Only Admin can add course requirements</Rule>
+      </BusinessRules>
+    </Entity>
+
+    <!-- StudentCourse Entity (Bridge Table) -->
+    <Entity name="StudentCourse" type="Bridge" category="Academic">
+      <Description>Student course records (Many-to-Many bridge between AppUser and CourseRequirement)</Description>
+  <Attributes>
+        <Attribute name="Id" type="int" key="PK" nullable="false">
+  <Description>Primary key - Auto increment</Description>
+  </Attribute>
+        <Attribute name="StudentId" type="string" key="FK" nullable="false">
+    <Description>Foreign key to AppUser (Student)</Description>
+          <References entity="AppUser" attribute="Id"/>
+        </Attribute>
+        <Attribute name="CourseRequirementId" type="int" key="FK" nullable="false">
+  <Description>Foreign key to CourseRequirement</Description>
+          <References entity="CourseRequirement" attribute="Id"/>
+        </Attribute>
+      <Attribute name="IsCompleted" type="boolean" nullable="false">
+ <Description>Course completion status</Description>
+      </Attribute>
+      <Attribute name="Grade" type="double" nullable="true">
+   <Description>Course grade</Description>
+        </Attribute>
+        <Attribute name="CompletionDate" type="datetime" nullable="true">
+          <Description>Course completion date</Description>
+     </Attribute>
+      </Attributes>
+      <Constraints>
+        <UniqueConstraint columns="StudentId, CourseRequirementId">
+        <Description>Student cannot add same course twice</Description>
+        </UniqueConstraint>
+      </Constraints>
+      <BusinessRules>
+        <Rule>When IsCompleted=true, credits added to StudentProfile</Rule>
+      </BusinessRules>
+    </Entity>
+
+    <!-- DocumentRating Entity -->
+    <Entity name="DocumentRating" type="Domain" category="Documents">
+      <Description>Document version ratings (0-100 score)</Description>
+      <Attributes>
+     <Attribute name="Id" type="int" key="PK" nullable="false">
+    <Description>Primary key - Auto increment</Description>
+ </Attribute>
+        <Attribute name="DocumentVersionId" type="int" key="FK" nullable="false">
+ <Description>Foreign key to DocumentVersion</Description>
+          <References entity="DocumentVersion" attribute="Id"/>
+      </Attribute>
+        <Attribute name="AdvisorUserId" type="string" key="FK" nullable="false">
+          <Description>Foreign key to AppUser (Advisor)</Description>
+  <References entity="AppUser" attribute="Id"/>
+      </Attribute>
+        <Attribute name="Score" type="int" nullable="false">
+        <Description>Rating score (1-100)</Description>
+        </Attribute>
+        <Attribute name="Comments" type="string" nullable="true">
+          <Description>Rating comments</Description>
+    </Attribute>
+        <Attribute name="CreatedAt" type="datetime" nullable="false">
+          <Description>Rating timestamp</Description>
+  </Attribute>
+      </Attributes>
+  <BusinessRules>
+        <Rule>Only Advisor and Admin can rate</Rule>
+     <Rule>Advisor can only rate own students</Rule>
+        <Rule>Admin can rate all documents</Rule>
+        <Rule>Score range: 1-100</Rule>
+        <Rule>Can update existing rating</Rule>
+      </BusinessRules>
+    </Entity>
+
+  </Entities>
+
+  <!-- Relationships Definition -->
+  <Relationships>
+    
+    <!-- AppUser Relationships -->
+    <Relationship id="R1" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Document</ChildEntity>
+   <ForeignKey>OwnerUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One user owns many documents</Description>
+      <DeleteRule>RESTRICT</DeleteRule>
+  </Relationship>
+
+    <Relationship id="R2" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Document</ChildEntity>
+      <ForeignKey>AdvisorUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One advisor advises many documents</Description>
+      <DeleteRule>SET NULL</DeleteRule>
+    </Relationship>
+
+ <Relationship id="R3" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>DocumentVersion</ChildEntity>
+<ForeignKey>UploadedByUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+    <Description>One user uploads many versions</Description>
+      <DeleteRule>RESTRICT</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R4" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Comment</ChildEntity>
+      <ForeignKey>AuthorUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One user writes many comments</Description>
+      <DeleteRule>RESTRICT</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R5" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Notification</ChildEntity>
+    <ForeignKey>UserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One user receives many notifications</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R6" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Submission</ChildEntity>
+      <ForeignKey>StudentId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One student has many submissions</Description>
+   <DeleteRule>RESTRICT</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R7" type="OneToMany">
+<ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>Submission</ChildEntity>
+      <ForeignKey>CreatedByUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+    <Description>One advisor/admin creates many submissions</Description>
+      <DeleteRule>RESTRICT</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R8" type="OneToOne">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>StudentProfile</ChildEntity>
+      <ForeignKey>UserId</ForeignKey>
+      <Cardinality>1:1</Cardinality>
+      <Description>One user has one profile</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+      <IsUnique>true</IsUnique>
+    </Relationship>
+
+    <Relationship id="R9" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>StudentCourse</ChildEntity>
+      <ForeignKey>StudentId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One student takes many courses</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R10" type="OneToMany">
+      <ParentEntity>AppUser</ParentEntity>
+      <ChildEntity>DocumentRating</ChildEntity>
+      <ForeignKey>AdvisorUserId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One advisor rates many documents</Description>
+      <DeleteRule>RESTRICT</DeleteRule>
+    </Relationship>
+
+    <!-- Document Relationships -->
+    <Relationship id="R11" type="OneToMany">
+      <ParentEntity>Document</ParentEntity>
+      <ChildEntity>DocumentVersion</ChildEntity>
+    <ForeignKey>DocumentId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+ <Description>One document has many versions</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R12" type="OneToMany">
+    <ParentEntity>Document</ParentEntity>
+      <ChildEntity>Submission</ChildEntity>
+      <ForeignKey>DocumentId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+    <Description>One document has many submissions</Description>
+      <DeleteRule>SET NULL</DeleteRule>
+    </Relationship>
+
+    <!-- DocumentVersion Relationships -->
+    <Relationship id="R13" type="OneToMany">
+   <ParentEntity>DocumentVersion</ParentEntity>
+      <ChildEntity>Comment</ChildEntity>
+      <ForeignKey>DocumentVersionId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+    <Description>One version has many comments</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <Relationship id="R14" type="OneToMany">
+ <ParentEntity>DocumentVersion</ParentEntity>
+      <ChildEntity>DocumentRating</ChildEntity>
+      <ForeignKey>DocumentVersionId</ForeignKey>
+      <Cardinality>1:N</Cardinality>
+      <Description>One version has many ratings</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <!-- CourseRequirement Relationships -->
+    <Relationship id="R15" type="OneToMany">
+    <ParentEntity>CourseRequirement</ParentEntity>
+      <ChildEntity>StudentCourse</ChildEntity>
+      <ForeignKey>CourseRequirementId</ForeignKey>
+ <Cardinality>1:N</Cardinality>
+      <Description>One course taken by many students</Description>
+      <DeleteRule>CASCADE</DeleteRule>
+    </Relationship>
+
+    <!-- Many-to-Many Relationship -->
+    <Relationship id="R16" type="ManyToMany">
+   <Entity1>AppUser</Entity1>
+      <Entity2>CourseRequirement</Entity2>
+   <BridgeTable>StudentCourse</BridgeTable>
+      <Cardinality>N:M</Cardinality>
+      <Description>Students take many courses, courses taken by many students</Description>
+    </Relationship>
+
+  </Relationships>
+
+  <!-- Summary Statistics -->
+  <Statistics>
+    <TotalEntities>10</TotalEntities>
+    <TotalRelationships>15</TotalRelationships>
+    <RelationshipTypes>
+   <OneToOne>1</OneToOne>
+      <OneToMany>13</OneToMany>
+      <ManyToMany>1</ManyToMany>
+    </RelationshipTypes>
+    <DeleteRules>
+      <CASCADE>7</CASCADE>
+      <RESTRICT>7</RESTRICT>
+      <SET_NULL>2</SET_NULL>
+    </DeleteRules>
+  </Statistics>
+
+</EntityRelationshipDiagram>
