@@ -275,18 +275,32 @@ Authorization: Bearer {token}
 
 ### Get My Documents
 ```http
-GET /api/documents
+GET /api/documents?title=tez&startDate=2024-01-01&endDate=2024-12-31
 Authorization: Bearer {token}
 ```
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `title` | string | No | Search in document title (partial match) |
+| `startDate` | datetime | No | Filter from this date (ISO 8601) |
+| `endDate` | datetime | No | Filter until this date (ISO 8601) |
+
+**Authorization & Filtering:**
+- **Admin**: Can see all documents
+- **Advisor**: Can see only their students' documents (where `advisorUserId` matches)
+- **Student**: Can see only their own documents (where `ownerUserId` matches)
 
 **Response:**
 ```json
 [
   {
     "id": 1,
-    "title": "Thesis Draft",
+"title": "Thesis Draft",
     "tags": "research,thesis",
     "createdAt": "2024-01-15T10:30:00Z",
+    "ownerUserId": "student-id-123",
+    "advisorUserId": "advisor-id-456",
     "versionCount": 3
   }
 ]
@@ -323,15 +337,51 @@ POST /api/documents/{id}/versions
 Authorization: Bearer {token}
 Content-Type: multipart/form-data
 
-file: [binary file, max 100MB]
+file: [binary file, max 10MB]
 notes: "Initial draft"
 ```
+
+**File Upload Rules:**
+- **Maximum Size**: 10MB (10,485,760 bytes)
+- **Allowed Types**: PDF, DOCX, PPTX only
+- **Validation**: Automatic via middleware
 
 **Response:**
 ```json
 {
   "id": 12,
   "versionNo": 2
+}
+```
+
+**Error Responses:**
+
+**413 - File Too Large:**
+```json
+{
+"error": "File size exceeds limit",
+  "message": "File 'large_doc.pdf' is 15.50MB. Maximum allowed size is 10MB.",
+  "maxSizeMB": 10,
+  "fileSizeMB": 15.5
+}
+```
+
+**400 - Invalid File Type:**
+```json
+{
+  "error": "Invalid file type",
+  "message": "File type '.xlsx' is not allowed. Only PDF, DOCX, and PPTX files are accepted.",
+  "allowedTypes": [".pdf", ".docx", ".pptx"],
+  "providedType": ".xlsx"
+}
+```
+
+**400 - Invalid Content Type:**
+```json
+{
+  "error": "Invalid content type",
+  "message": "Content type 'application/vnd.ms-excel' is not allowed.",
+  "allowedTypes": ["PDF", "DOCX", "PPTX"]
 }
 ```
 
@@ -343,19 +393,40 @@ GET /api/documents/{id}/versions
 Authorization: Bearer {token}
 ```
 
+**Authorization:**
+- Document owner
+- Assigned advisor
+- Admin
+
+**Version Limit:** Returns only the **last 2 versions** (current + 1 previous)
+
 **Response:**
 ```json
 [
   {
- "id": 12,
+    "id": 12,
     "versionNo": 2,
     "fileName": "thesis_v2.pdf",
     "size": 2048576,
+    "sizeInMB": 2.0,
     "createdAt": "2024-01-15T14:20:00Z",
-    "notes": "Added references"
+"notes": "Added references",
+    "contentType": "application/pdf"
+  },
+  {
+    "id": 11,
+    "versionNo": 1,
+  "fileName": "thesis_v1.pdf",
+    "size": 1572864,
+    "sizeInMB": 1.5,
+  "createdAt": "2024-01-10T10:00:00Z",
+    "notes": "First draft",
+"contentType": "application/pdf"
   }
 ]
 ```
+
+**Note:** Only the most recent 2 versions are visible to users. Older versions are kept in database but not displayed.
 
 ---
 
@@ -1142,18 +1213,44 @@ Content-Type: application/json
 
 {
   "studentId": "student-id-789",
-  "dueDate": "2024-02-01T23:59:59Z"
+  "documentId": 5,
+  "dueDate": "2024-02-01T23:59:59Z",
+  "notes": "Please complete final revisions"
 }
 ```
+
+**Parameters:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `studentId` | string | ✅ | Student user ID |
+| `documentId` | integer | ❌ | Related document ID (optional) |
+| `dueDate` | datetime | ✅ | Deadline (ISO 8601) |
+| `notes` | string | ❌ | Additional notes |
 
 **Response:**
 ```json
 {
-  "id": 4
+  "id": 4,
+  "message": "Submission deadline created successfully"
 }
 ```
 
+**Authorization:**
+- **Advisor**: Can only create submissions for their own students
+- **Admin**: Can create submissions for any student
+
+**Side Effects:**
+- ✅ Student receives immediate notification
+- ✅ Automatic deadline reminders start (3 days before)
+
 **Note:** Requires `Advisor` or `Admin` role
+
+**403 Forbidden (Advisor trying to assign to other students):**
+```json
+{
+  "error": "You can only create submissions for your own students"
+}
+```
 
 ---
 
@@ -1766,252 +1863,187 @@ POST /api/debug/fix-missing-roles
 | 401 | Unauthorized - Missing or invalid token |
 | 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found |
-| 413 | Payload Too Large - File exceeds 100MB |
+| 413 | Payload Too Large - File exceeds 10MB |
 | 500 | Internal Server Error |
 
 ---
 
-## 🔧 Troubleshooting
+## 📁 File Upload Rules & Restrictions
 
-### Common Errors and Solutions
+### File Size Limit
 
-#### 1. 403 Forbidden on Statistics Endpoints
+**Maximum Size:** 10MB (10,485,760 bytes)
 
-**Error:**
+**Validation:** Automatic via middleware before reaching controller
+
+**Error Response (413):**
+```json
+{
+  "error": "File size exceeds limit",
+  "message": "File 'document.pdf' is 15.50MB. Maximum allowed size is 10MB.",
+  "maxSizeMB": 10,
+  "fileSizeMB": 15.5
+}
 ```
-Failed to load resource: the server responded with a status of 403
-```
-
-**Solution:**
-- **Student Summary** (`/api/statistics/student/summary`) - No specific role required anymore. Any authenticated user can access their own statistics.
-- **Advisor Summary** (`/api/statistics/advisor/summary`) - Requires `Advisor` or `Admin` role.
-- **Admin Overview** (`/api/statistics/admin/overview`) - Requires `Admin` role.
-
-Make sure you're logged in with the correct role.
 
 ---
 
-#### 2. 500 Internal Server Error on Notifications
+### Allowed File Types
 
-**Error:**
-```
-Failed to load resource: the server responded with a status of 500
-AxiosError
-```
+| Type | Extension | MIME Type |
+|------|-----------|-----------|
+| **PDF** | `.pdf` | `application/pdf` |
+| **Word Document** | `.docx` | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| **PowerPoint** | `.pptx` | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |
 
-**Status:** ✅ **FIXED** (2025-01-06)
+**Validation:** Both extension and content-type are checked
 
-**What Was Fixed:**
-1. Enhanced user ID extraction with multiple claim type fallbacks
-2. Added more claim types to JWT token generation
-3. Improved error handling - now returns 0 instead of 500 for better UX
-4. Added null checks throughout NotificationService
-5. Added `/api/notifications/test-claims` endpoint for debugging
-
-**Solution for Existing Users:**
-1. **Re-login** to get a new token with updated claims
-2. **Clear browser cache** if issues persist
-3. **Test your claims** using the new debug endpoint
-
-**Test Your Token:**
-```http
-GET /api/notifications/test-claims
-Authorization: Bearer {token}
+**Error Response (400 - Invalid Extension):**
+```json
+{
+  "error": "Invalid file type",
+  "message": "File type '.xlsx' is not allowed. Only PDF, DOCX, and PPTX files are accepted.",
+  "allowedTypes": [".pdf", ".docx", ".pptx"],
+  "providedType": ".xlsx"
+}
 ```
 
-If `userId` in response is null or empty, you need to re-login.
+**Error Response (400 - Invalid Content Type):**
+```json
+{
+  "error": "Invalid content type",
+  "message": "Content type 'application/vnd.ms-excel' is not allowed.",
+  "allowedTypes": ["PDF", "DOCX", "PPTX"]
+}
+```
 
-**Updated Behavior:**
-- `/api/notifications/unread-count` now returns `{ "unreadCount": 0 }` even if error occurs
-- Better UX - UI doesn't break with 500 errors
-- Detailed backend logging for troubleshooting
+---
 
-**Possible Causes (Historical):**
-1. User ID not found in JWT token claims ✅ Fixed
-2. Database connection issue (Check `/api/health/database`)
-3. Old token without proper claims ✅ Fixed - Re-login required
+### Frontend Validation Example
 
-**How to Verify Fix:**
 ```javascript
-// 1. Check token claims
-const response = await fetch('/api/notifications/test-claims', {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-const data = await response.json();
-console.log('User ID:', data.userId); // Should not be null
+const validateFile = (file) => {
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  const allowedTypes = ['.pdf', '.docx', '.pptx'];
+  const allowedMimeTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  ];
 
-// 2. Check unread count
-const count = await fetch('/api/notifications/unread-count', {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-console.log(await count.json()); // Should return { unreadCount: N }
+  // Size check
+  if (file.size > maxSize) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    return {
+  valid: false,
+      error: `File is too large (${sizeMB}MB). Maximum size is 10MB.`
+    };
+  }
+
+  // Extension check
+  const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+  if (!allowedTypes.includes(extension)) {
+    return {
+      valid: false,
+      error: `File type ${extension} is not allowed. Only PDF, DOCX, and PPTX files are accepted.`
+    };
+  }
+
+  // MIME type check
+  if (!allowedMimeTypes.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Invalid file format. Only PDF, DOCX, and PPTX files are accepted.`
+    };
+  }
+
+  return { valid: true };
+};
+
+// Usage
+const handleFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const validation = validateFile(file);
+  if (!validation.valid) {
+    alert(validation.error);
+    event.target.value = ''; // Clear selection
+    return;
+  }
+
+  // Proceed with upload
+  uploadFile(file);
+};
 ```
 
 ---
 
-#### 3. TypeError: students.map is not a function
+## 🔔 Automatic Notifications
 
-**Error:**
-```javascript
-Uncaught TypeError: students.map is not a function
-```
+### Deadline Reminder System
 
-**Cause:**
-API response structure mismatch. The API now returns:
+**Background Service:** Runs every hour to check upcoming deadlines
+
+**Trigger Conditions:**
+- Submission deadline is within **3 days**
+- Status is **"Pending"**
+- No notification sent in the last 3 days
+
+**Notification Content:**
+
+**3 days before:**
 ```json
 {
-  "students": [...],  // Array is nested inside an object
-  "totalCount": 45,
-  "page": 1
+  "title": "Teslim Tarihi Yaklaşıyor",
+  "message": "Teslim tarihinize 3 gün kaldı. Tarih: 15/02/2024 23:59",
+  "type": 0,
+  "relatedEntityId": "10",
+  "relatedEntityType": "Submission"
 }
 ```
 
-**Frontend Fix:**
-```javascript
-// ❌ Wrong
-const response = await api.get('/students');
-const students = response.data; // This is an object, not array
-students.map(...) // Error!",
-
-// ✅ Correct
-const response = await api.get('/students');
-const { students, totalCount, page, totalPages } = response.data;
-students.map(...) // Works!
-
-// Or
-const studentsArray = response.data.students;
-studentsArray.map(...) // Works!
+**Same day (< 24 hours):**
+```json
+{
+  "title": "Teslim Tarihi Yaklaşıyor",
+  "message": "Teslim tarihinize 18 saat kaldı. Tarih: 15/02/2024 23:59",
+  "type": 0,
+  "relatedEntityId": "10",
+  "relatedEntityType": "Submission"
+}
 ```
+
+**Notification Delivery:**
+- ✅ Sent via `/api/notifications` endpoint
+- ✅ Visible in student's notification list
+- ✅ Includes deadline date and time
+- ✅ One-time per deadline
 
 ---
 
-# Storage Management Endpoints
+## 🔐 Authorization Matrix
 
-## Overview
-The Storage Management API allows administrators to manage storage configurations, view storage statistics, and handle files (list, check existence, cleanup orphaned files).
+### Document Access Control
 
-All endpoints require `Admin` role.
+| Role | Can View | Conditions |
+|------|----------|------------|
+| **Student** | ✅ Own documents | `ownerUserId` matches their ID |
+| **Advisor** | ✅ Assigned students' documents | `advisorUserId` matches their ID |
+| **Admin** | ✅ All documents | No restrictions |
 
----
+### Submission Creation
 
-## 🔍 Storage Info Endpoints
+| Role | Can Create For | Restrictions |
+|------|----------------|--------------|
+| **Advisor** | ✅ Own students only | Document's `advisorUserId` must match |
+| **Admin** | ✅ Any student | No restrictions |
+| **Student** | ❌ Cannot create | - |
 
-### Get Storage Configuration Info
-```http
-GET /api/storage/info
-Authorization: Bearer {token}
-```
+### Version Visibility
 
-**Response:**
-```json
-{
-  "provider": "AzureBlob",
-  "containerName": "advisorysystemstorage",
-  "baseUrl": "https://advisorysystemstorage.blob.core.windows.net/"
-}
-```
-
----
-
-## 📊 Storage Statistics Endpoints
-
-### Get Storage Statistics
-```http
-GET /api/storage/statistics
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-  "totalUsedSpace": 52428800,
-  "totalAvailableSpace": 2147483648,
-  "totalFiles": 120,
-  "recentFiles": [
-    {
-      "name": "doc_123_thesis.pdf",
-      "size": 2048576,
-      "lastModified": "2024-01-15T14:20:00Z"
-    }
-  ]
-}
-```
-
----
-
-## 📁 File Management Endpoints
-
-### List All Files
-```http
-GET /api/storage/files?prefix=doc_
-Authorization: Bearer {token}
-```
-
-**Query Parameters:**
-- `prefix` (optional): Filter files by prefix
-
-**Response:**
-```json
-{
-  "count": 2,
-  "files": [
-    "https://advisorysystemstorage.blob.core.windows.net/documents/doc_123_thesis.pdf",
-    "https://advisorysystemstorage.blob.core.windows.net/documents/doc_456_report.docx"
-  ]
-}
-```
-
-**Note:** 
-- `files` field is always an array (never null)
-- Empty result returns `{ "count": 0, "files": [] }`
-- Safe for frontend `.slice()` operations
-
-**Error Response:**
-```json
-{
-  "error": "Failed to list files",
-  "details": "Connection timeout"
-}
-```
-
----
-
-### Check File Exists
-```http
-GET /api/storage/exists?fileName=doc_123_thesis.pdf
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-  "exists": true
-}
-```
-
-**Error Response:**
-```json
-{
-  "error": "File not found"
-}
-```
-
----
-
-### Clean Up Orphaned Files
-```http
-DELETE /api/storage/cleanup-orphaned
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-  "message": "Orphaned files cleaned up successfully",
-  "deletedFiles": 10
-}
-```
-
-**Note:** This operation permanently deletes files. Use with caution.
-
----
+| Rule | Limit |
+|------|-------|
+| **Version Count** | Last 2 versions only |
+| **Who Can View** | Owner, Advisor, Admin |
+| **Older Versions** | Kept in database but not displayed |

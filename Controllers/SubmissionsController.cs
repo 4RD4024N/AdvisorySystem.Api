@@ -81,37 +81,84 @@ _users = users;
         }
     }
 
-    // Yeni teslim tarihi oluþtur
+    // Yeni teslim tarihi oluþtur - Danýþman öðrenciye belge için teslim tarihi belirler
     [HttpPost]
     [Authorize(Roles = "Advisor,Admin")]
     public async Task<IActionResult> Create([FromBody] CreateSubmissionDto dto)
     {
-        var submission = new Submission
-    {
-            StudentId = dto.StudentId,
-       DueDate = dto.DueDate,
-  Status = "Pending"
-        };
- _db.Submissions.Add(submission);
-        await _db.SaveChangesAsync();
-        return Ok(new { submission.Id });
+        try
+        {
+   var uid = GetUserId();
+if (string.IsNullOrEmpty(uid))
+     return Unauthorized();
+
+   // Öðrenci var mý kontrol et
+     var student = await _users.FindByIdAsync(dto.StudentId);
+    if (student == null)
+       return NotFound(new { error = "Student not found" });
+
+        // Doküman varsa kontrol et
+            if (dto.DocumentId.HasValue)
+      {
+         var doc = await _db.Documents.FindAsync(dto.DocumentId.Value);
+    if (doc == null)
+     return NotFound(new { error = "Document not found" });
+
+     // Danýþman sadece kendi öðrencisine teslim atayabilir
+  if (User.IsInRole("Advisor") && doc.AdvisorUserId != uid)
+    return Forbid();
+}
+
+   var submission = new Submission
+            {
+    StudentId = dto.StudentId,
+      DocumentId = dto.DocumentId,
+ DueDate = dto.DueDate,
+            Status = "Pending",
+      CreatedByUserId = uid,
+       Notes = dto.Notes
+     };
+      
+      _db.Submissions.Add(submission);
+       await _db.SaveChangesAsync();
+
+     // Bildirim oluþtur
+  await CreateDeadlineNotification(dto.StudentId, submission.Id, dto.DueDate);
+
+    return Ok(new { 
+        submission.Id,
+        message = "Submission deadline created successfully"
+            });
+  }
+  catch (Exception ex)
+   {
+        return StatusCode(500, new { error = "Failed to create submission", details = ex.Message });
+    }
     }
 
-    // Teslim durumunu güncelle
-    [HttpPatch("{id:int}/status")]
-    [Authorize(Roles = "Student")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
+ private async Task CreateDeadlineNotification(string studentId, int submissionId, DateTime dueDate)
     {
-        var uid = GetUserId();
-      var submission = await _db.Submissions.FindAsync(id);
-        if (submission == null) return NotFound();
-      if (submission.StudentId != uid) return Forbid();
+  try
+{
+    var notification = new Notification
+            {
+       UserId = studentId,
+   Title = "New Submission Deadline",
+        Message = $"You have a new submission deadline: {dueDate:dd/MM/yyyy HH:mm}",
+  Type = NotificationType.DeadlineApproaching,
+    RelatedEntityId = submissionId.ToString(),
+       RelatedEntityType = "Submission",
+       IsRead = false
+       };
 
-      submission.Status = dto.Status;
-        await _db.SaveChangesAsync();
-        return Ok(new { submission.Status });
+     _db.Notifications.Add(notification);
+            await _db.SaveChangesAsync();
+  }
+ catch
+        {
+    // Bildirim hatasý ana iþlemi etkilemez
+ }
     }
 
-    public record CreateSubmissionDto(string StudentId, DateTime DueDate);
-    public record UpdateStatusDto(string Status);
+    public record CreateSubmissionDto(string StudentId, int? DocumentId, DateTime DueDate, string? Notes);
 }

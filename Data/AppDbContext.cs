@@ -89,8 +89,14 @@ namespace AdvisorySystem.Api.Data
     {
         public int Id { get; set; }
         public string StudentId { get; set; } = "";
+        public int? DocumentId { get; set; }  // Hangi doküman için teslim isteniyor
+        public Document? Document { get; set; }
         public DateTime DueDate { get; set; }
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = "Pending";  // Pending, Submitted, Late
+        public DateTime? SubmittedAt { get; set; }
+        public string? Notes { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string CreatedByUserId { get; set; } = "";  // Danışman veya Admin
     }
 
     public class Comment

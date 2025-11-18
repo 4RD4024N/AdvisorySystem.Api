@@ -39,20 +39,63 @@ namespace AdvisorySystem.Api.Controllers
         // Öğrenci kendi dokümanlarını görsün
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> GetMine()
+        public async Task<IActionResult> GetMine([FromQuery] string? title = null, 
+        [FromQuery] DateTime? startDate = null,
+    [FromQuery] DateTime? endDate = null)
         {
             var uid = GetUserId();
-            var list = await _db.Documents
-                .Where(d => d.OwnerUserId == uid)
-                .Select(d => new {
-                    d.Id,
-                    d.Title,
-                    d.Tags,
-                    d.CreatedAt,
-                    VersionCount = d.Versions.Count
-                })
-                .ToListAsync();
-            return Ok(list);
+   var isAdmin = User.IsInRole("Admin");
+            var isAdvisor = User.IsInRole("Advisor");
+
+ IQueryable<Document> query;
+
+       if (isAdmin)
+            {
+      // Admin tüm dokümanları görür
+                query = _db.Documents;
+  }
+else if (isAdvisor)
+   {
+   // Danışman sadece danışmanı olduğu öğrencilerin dokümanlarını görür
+         query = _db.Documents.Where(d => d.AdvisorUserId == uid);
+            }
+            else
+          {
+        // Öğrenci sadece kendi dokümanlarını görür
+                query = _db.Documents.Where(d => d.OwnerUserId == uid);
+   }
+
+            // Başlık filtresi
+    if (!string.IsNullOrWhiteSpace(title))
+        {
+      query = query.Where(d => d.Title.Contains(title));
+         }
+
+ // Tarih filtresi
+            if (startDate.HasValue)
+            {
+     query = query.Where(d => d.CreatedAt >= startDate.Value);
+   }
+
+          if (endDate.HasValue)
+            {
+  query = query.Where(d => d.CreatedAt <= endDate.Value);
+      }
+
+   var list = await query
+        .OrderByDescending(d => d.CreatedAt)
+   .Select(d => new {
+    d.Id,
+   d.Title,
+            d.Tags,
+   d.CreatedAt,
+            d.OwnerUserId,
+       d.AdvisorUserId,
+           VersionCount = d.Versions.Count
+           })
+    .ToListAsync();
+          
+       return Ok(list);
         }
 
         // Öğrenci yeni Document açar
@@ -104,19 +147,45 @@ namespace AdvisorySystem.Api.Controllers
             return Ok(new { ver.Id, ver.VersionNo });
         }
 
-        // Versiyonları listele
+        // Versiyonları listele - Son 2 versiyon
         [HttpGet("{id:int}/versions")]
         [Authorize]
         public async Task<IActionResult> Versions(int id)
         {
-            var list = await _db.DocumentVersions
-                .Where(v => v.DocumentId == id)
-                .OrderByDescending(v => v.VersionNo)
-                .Select(v => new { v.Id, v.VersionNo, v.FileName, v.Size, v.CreatedAt, v.Notes })
-                .ToListAsync();
-            return Ok(list);
-        }
+       // Yetki kontrolü
+    var doc = await _db.Documents.FindAsync(id);
+      if (doc == null) return NotFound();
 
+       var uid = GetUserId();
+          var isAdmin = User.IsInRole("Admin");
+       var isAdvisor = User.IsInRole("Advisor");
+
+  // Sadece admin, danışman veya doküman sahibi görebilir
+         if (!isAdmin && uid != doc.OwnerUserId && uid != doc.AdvisorUserId)
+      {
+    return Forbid();
+            }
+
+    // Son 2 versiyonu getir
+        var list = await _db.DocumentVersions
+    .Where(v => v.DocumentId == id)
+       .OrderByDescending(v => v.VersionNo)
+    .Take(2)
+          .Select(v => new { 
+        v.Id, 
+       v.VersionNo, 
+        v.FileName, 
+         v.Size, 
+       v.CreatedAt, 
+          v.Notes,
+   v.ContentType,
+    sizeInMB = Math.Round(v.Size / 1024.0 / 1024.0, 2)
+     })
+  .ToListAsync();
+    
+            return Ok(list);
+ }
+        
         // Dosyayı indir
         [HttpGet("download/{versionId:int}")]
         [Authorize]

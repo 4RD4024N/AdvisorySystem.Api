@@ -109,6 +109,9 @@ else
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Background service for deadline notifications
+builder.Services.AddHostedService<DeadlineNotificationService>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
