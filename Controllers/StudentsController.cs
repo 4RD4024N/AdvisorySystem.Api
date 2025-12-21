@@ -30,72 +30,89 @@ _notificationService = notificationService;
     // Get all students with search and pagination
     [HttpGet]
     public async Task<IActionResult> GetAllStudents(
-   [FromQuery] string? search = null,
-   [FromQuery] int page = 1,
-    [FromQuery] int pageSize = 20)
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+     [FromQuery] int pageSize = 20)
     {
         try
         {
-         // Get all users in Student role
-       var students = await _userManager.GetUsersInRoleAsync("Student");
+     // Get all users
+   var usersQuery = _userManager.Users.AsQueryable();
 
-  // Apply search filter
+        // Apply search filter
      if (!string.IsNullOrWhiteSpace(search))
-    {
-  search = search.ToLower();
-students = students
-     .Where(s => 
-      (s.Email != null && s.Email.ToLower().Contains(search)) ||
-      (s.UserName != null && s.UserName.ToLower().Contains(search)))
-      .ToList();
-  }
-
-    var totalCount = students.Count;
-
-  // Apply pagination
-      var pagedStudents = students
-    .Skip((page - 1) * pageSize)
-       .Take(pageSize)
-     .ToList();
-
-// Get additional info for each student
-            var studentDetails = new List<object>();
-     foreach (var student in pagedStudents)
-      {
-       var documentCount = await _db.Documents
-    .CountAsync(d => d.OwnerUserId == student.Id);
-
-          var pendingSubmissions = await _db.Submissions
-           .CountAsync(s => s.StudentId == student.Id && s.Status == "Pending");
-
-          var hasAdvisor = await _db.Documents
-           .AnyAsync(d => d.OwnerUserId == student.Id && d.AdvisorUserId != null);
-
-    studentDetails.Add(new
- {
-         id = student.Id,
-    userName = student.UserName,
-           email = student.Email,
-            emailConfirmed = student.EmailConfirmed,
-     documentCount = documentCount,
-pendingSubmissions = pendingSubmissions,
-      hasAdvisor = hasAdvisor
-    });
+  {
+       search = search.ToLower();
+       usersQuery = usersQuery.Where(s =>
+         (s.Email != null && s.Email.ToLower().Contains(search)) ||
+        (s.UserName != null && s.UserName.ToLower().Contains(search)));
        }
 
-    return Ok(new
+      var totalUsers = await usersQuery.CountAsync();
+
+   // Apply pagination
+    var users = await usersQuery
+       .OrderBy(s => s.UserName)
+  .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+      .ToListAsync();
+
+            // Filter to only students and get additional info
+            var studentDetails = new List<object>();
+   foreach (var user in users)
             {
-     totalCount = totalCount,
-         page = page,
-          pageSize = pageSize,
-   totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+   // Check if user is a student
+          if (!await _userManager.IsInRoleAsync(user, "Student"))
+          continue;
+
+     var documentCount = await _db.Documents
+   .CountAsync(d => d.OwnerUserId == user.Id);
+
+ var pendingSubmissions = await _db.Submissions
+      .CountAsync(s => s.StudentId == user.Id && s.Status == "Pending");
+
+     // Get advisor info
+           object? advisorInfo = null;
+        if (user.AdvisorId != null)
+     {
+         var advisor = await _userManager.FindByIdAsync(user.AdvisorId);
+     if (advisor != null)
+        {
+    advisorInfo = new
+        {
+           id = advisor.Id,
+         userName = advisor.UserName,
+          email = advisor.Email
+        };
+   }
+         }
+
+       studentDetails.Add(new
+              {
+     id = user.Id,
+               userName = user.UserName,
+       email = user.Email,
+          emailConfirmed = user.EmailConfirmed,
+          documentCount,
+ pendingSubmissions,
+       hasAdvisor = user.AdvisorId != null,
+         advisor = advisorInfo
+      });
+            }
+
+return Ok(new
+        {
+                totalCount = studentDetails.Count,
+     page,
+pageSize,
+   totalPages = (int)Math.Ceiling(studentDetails.Count / (double)pageSize),
        students = studentDetails
             });
         }
-        catch (Exception ex)
-        {
- return StatusCode(500, new { error = "Failed to retrieve students", details = ex.Message });
-  }
+      catch (Exception ex)
+    {
+         return StatusCode(500, new { error = "Failed to retrieve students", details = ex.Message });
+     }
     }
 
     // Get student details by ID
@@ -103,21 +120,37 @@ pendingSubmissions = pendingSubmissions,
     public async Task<IActionResult> GetStudentById(string id)
     {
         var student = await _userManager.FindByIdAsync(id);
-        if (student == null)
+     if (student == null)
       return NotFound("Student not found");
 
-        // Check if user is actually a student
-        if (!await _userManager.IsInRoleAsync(student, "Student"))
-      return BadRequest("User is not a student");
+      // Check if user is actually a student
+     if (!await _userManager.IsInRoleAsync(student, "Student"))
+            return BadRequest("User is not a student");
+
+        // Öðretmen bilgisi (YENÝ)
+        object? advisorInfo = null;
+        if (student.AdvisorId != null)
+ {
+    var advisor = await _userManager.FindByIdAsync(student.AdvisorId);
+   if (advisor != null)
+ {
+           advisorInfo = new
+   {
+   id = advisor.Id,
+  userName = advisor.UserName,
+email = advisor.Email
+         };
+ }
+  }
 
      // Get student's documents
-        var documents = await _db.Documents
+ var documents = await _db.Documents
     .Where(d => d.OwnerUserId == id)
   .Select(d => new
  {
                 d.Id,
         d.Title,
-       d.Tags,
+    d.Tags,
         d.CreatedAt,
    versionCount = d.Versions.Count,
        advisorId = d.AdvisorUserId
@@ -125,24 +158,26 @@ pendingSubmissions = pendingSubmissions,
     .ToListAsync();
 
   // Get student's submissions
-        var submissions = await _db.Submissions
+    var submissions = await _db.Submissions
           .Where(s => s.StudentId == id)
       .OrderByDescending(s => s.DueDate)
  .ToListAsync();
 
         // Get unread notifications count
         var unreadNotifications = await _db.Notifications
-            .CountAsync(n => n.UserId == id && !n.IsRead);
+       .CountAsync(n => n.UserId == id && !n.IsRead);
 
         return Ok(new
         {
-            id = student.Id,
+id = student.Id,
         userName = student.UserName,
     email = student.Email,
-        emailConfirmed = student.EmailConfirmed,
-            documents = documents,
+      emailConfirmed = student.EmailConfirmed,
+    advisor = advisorInfo,
+      hasAdvisor = student.AdvisorId != null,
+ documents = documents,
       submissions = submissions,
-            unreadNotifications = unreadNotifications
+      unreadNotifications = unreadNotifications
 });
     }
 
@@ -268,31 +303,43 @@ try
     // Get students without advisor
     [HttpGet("without-advisor")]
     public async Task<IActionResult> GetStudentsWithoutAdvisor()
+    {
+   try
  {
-        var students = await _userManager.GetUsersInRoleAsync("Student");
-        var studentsWithoutAdvisor = new List<object>();
+       var students = await _userManager.Users
+        .Where(u => u.AdvisorId == null)
+     .ToListAsync();
 
-      foreach (var student in students)
-     {
-            var hasAdvisor = await _db.Documents
-    .AnyAsync(d => d.OwnerUserId == student.Id && d.AdvisorUserId != null);
-
-        if (!hasAdvisor)
-         {
+      // Filter to only students
+ var studentList = new List<object>();
+    foreach (var user in students)
+      {
+     if (await _userManager.IsInRoleAsync(user, "Student"))
+    {
      var documentCount = await _db.Documents
-    .CountAsync(d => d.OwnerUserId == student.Id);
+      .CountAsync(d => d.OwnerUserId == user.Id);
 
-       studentsWithoutAdvisor.Add(new
+      studentList.Add(new
           {
-id = student.Id,
-   userName = student.UserName,
-   email = student.Email,
-           documentCount = documentCount
-    });
-      }
-   }
+          id = user.Id,
+       userName = user.UserName,
+ email = user.Email,
+           emailConfirmed = user.EmailConfirmed,
+       documentCount
+        });
+  }
+ }
 
-        return Ok(studentsWithoutAdvisor);
+      return Ok(new
+      {
+     totalCount = studentList.Count,
+       students = studentList
+ });
+   }
+        catch (Exception ex)
+      {
+    return StatusCode(500, new { error = "Failed to retrieve students without advisor", details = ex.Message });
+        }
     }
 
     // Get students with pending submissions
@@ -321,13 +368,65 @@ var student = await _userManager.FindByIdAsync(item.studentId);
           id = student.Id,
      userName = student.UserName,
           email = student.Email,
-         pendingSubmissions = item.pendingCount,
+       pendingSubmissions = item.pendingCount,
 nextDeadline = item.nextDeadline
             });
       }
         }
 
         return Ok(result);
+    }
+
+    // Advisor: Get my students
+    [HttpGet("my-students")]
+    [Authorize(Roles = "Advisor")]
+    public async Task<IActionResult> GetMyStudents()
+    {
+      try
+        {
+            var advisorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(advisorId))
+       return Unauthorized(new { error = "User ID not found in token" });
+
+          // Get students assigned to this advisor
+       var students = await _userManager.Users
+ .Where(u => u.AdvisorId == advisorId)
+        .ToListAsync();
+
+         // Filter to only students (extra safety)
+            var studentDetails = new List<object>();
+          foreach (var student in students)
+      {
+      if (!await _userManager.IsInRoleAsync(student, "Student"))
+   continue;
+
+    var documentCount = await _db.Documents
+   .CountAsync(d => d.OwnerUserId == student.Id);
+
+             var pendingSubmissions = await _db.Submissions
+   .CountAsync(s => s.StudentId == student.Id && s.Status == "Pending");
+
+     studentDetails.Add(new
+    {
+           id = student.Id,
+     userName = student.UserName,
+    email = student.Email,
+     emailConfirmed = student.EmailConfirmed,
+      documentCount,
+         pendingSubmissions
+       });
+            }
+
+         return Ok(new
+ {
+          totalStudents = studentDetails.Count,
+     students = studentDetails
+            });
+        }
+        catch (Exception ex)
+        {
+       return StatusCode(500, new { error = "Failed to retrieve students", details = ex.Message });
+        }
     }
 
     // DTOs

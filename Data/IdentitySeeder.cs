@@ -8,33 +8,78 @@ public static class IdentitySeeder
 {
     public static async Task SeedAsync(IServiceProvider sp)
     {
-        using var scope = sp.CreateScope();
+     using var scope = sp.CreateScope();
         var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
+        // Rolleri oluştur
         string[] roles = new[] { "Student", "Advisor", "Admin" };
         foreach (var r in roles)
-            if (!await roleMgr.RoleExistsAsync(r))
-                await roleMgr.CreateAsync(new IdentityRole(r));
+if (!await roleMgr.RoleExistsAsync(r))
+            await roleMgr.CreateAsync(new IdentityRole(r));
 
-        // İsteğe bağlı: admin oluştur
-        var adminEmail = "admin@local";
-        var admin = await userMgr.FindByEmailAsync(adminEmail);
+        // 1. Admin oluştur
+  var adminEmail = "admin@local";
+     var admin = await userMgr.FindByEmailAsync(adminEmail);
         if (admin is null)
         {
-            admin = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
-            await userMgr.CreateAsync(admin, "Admin123!");
+     admin = new AppUser 
+         { 
+     UserName = adminEmail, 
+   Email = adminEmail, 
+       EmailConfirmed = true 
+            };
+          await userMgr.CreateAsync(admin, "Admin123!");
             await userMgr.AddToRoleAsync(admin, "Admin");
         }
 
-        // Öğrenci oluştur
-        var studentEmail = "stu@local";
-        var student = await userMgr.FindByEmailAsync(studentEmail);
-        if (student is null)
+        // 2. 3 Advisor oluştur
+ var advisors = new[]
         {
-            student = new AppUser { UserName = studentEmail, Email = studentEmail, EmailConfirmed = true };
-            await userMgr.CreateAsync(student, "Arda123!");
-            await userMgr.AddToRoleAsync(student, "Student");
+      new { Email = "advisor1@local", Password = "Advisor123!", Name = "Prof. Dr. Ahmet Yılmaz" },
+     new { Email = "advisor2@local", Password = "Advisor123!", Name = "Prof. Dr. Ayşe Demir" },
+   new { Email = "advisor3@local", Password = "Advisor123!", Name = "Doç. Dr. Mehmet Kaya" }
+        };
+
+        foreach (var advisorData in advisors)
+        {
+ var advisor = await userMgr.FindByEmailAsync(advisorData.Email);
+            if (advisor is null)
+            {
+      advisor = new AppUser 
+      { 
+   UserName = advisorData.Email, 
+       Email = advisorData.Email, 
+      EmailConfirmed = true 
+     };
+                await userMgr.CreateAsync(advisor, advisorData.Password);
+   await userMgr.AddToRoleAsync(advisor, "Advisor");
+    }
         }
+
+        // 3. 3 Student oluştur
+ var students = new[]
+        {
+  new { Email = "student1@local", Password = "Student123!", Name = "Ali Veli" },
+ new { Email = "student2@local", Password = "Student123!", Name = "Fatma Yıldız" },
+            new { Email = "student3@local", Password = "Student123!", Name = "Can Öztürk" }
+        };
+
+        foreach (var studentData in students)
+        {
+            var student = await userMgr.FindByEmailAsync(studentData.Email);
+            if (student is null)
+        {
+    student = new AppUser 
+       { 
+ UserName = studentData.Email, 
+        Email = studentData.Email, 
+          EmailConfirmed = true,
+    AdvisorId = null  // Başlangıçta advisor atanmamış
+     };
+       await userMgr.CreateAsync(student, studentData.Password);
+       await userMgr.AddToRoleAsync(student, "Student");
+            }
+   }
     }
 }

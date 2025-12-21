@@ -21,40 +21,13 @@ namespace AdvisorySystem.Api.Data
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);
-            
-            // Title is nvarchar(max), cannot be used as index key column directly
-            // If you need index on Title, change column to nvarchar(450) or similar
-            
-            b.Entity<DocumentVersion>()
-                .HasIndex(x => new { x.DocumentId, x.VersionNo })
-                .IsUnique();
 
-            b.Entity<Comment>()
-                .HasOne<DocumentVersion>()
+            // YENİ: AppUser (Student) -> Advisor relationship
+            b.Entity<AppUser>()
+                .HasOne(u => u.Advisor)
                 .WithMany()
-                .HasForeignKey(c => c.DocumentVersionId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // StudentProfile one-to-one with AppUser
-            b.Entity<StudentProfile>()
-                .HasOne(sp => sp.User)
-                .WithMany()
-                .HasForeignKey(sp => sp.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // DocumentRating relationships
-            b.Entity<DocumentRating>()
-                .HasOne(dr => dr.DocumentVersion)
-                .WithMany()
-                .HasForeignKey(dr => dr.DocumentVersionId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // StudentCourse relationships
-            b.Entity<StudentCourse>()
-                .HasOne(sc => sc.CourseRequirement)
-                .WithMany()
-                .HasForeignKey(sc => sc.CourseRequirementId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasForeignKey(u => u.AdvisorId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 

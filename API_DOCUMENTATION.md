@@ -60,7 +60,11 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ### Advisors
 - `GET /api/advisors` - Get all advisors
-- `POST /api/advisors/assign` - Assign advisor to document (Admin/Advisor)
+- `POST /api/advisors/assign-to-student` - ✨ Assign advisor to student (Admin)
+- `GET /api/advisors/my-advisor` - ✨ Get my advisor (Student)
+- `GET /api/advisors/my-students` - ✨ Get my students (Advisor)
+- `DELETE /api/advisors/remove-from-student/{id}` - ✨ Remove advisor from student (Admin)
+- `POST /api/advisors/assign` - Assign advisor to document (Admin/Advisor) ⚠️ DEPRECATED
 
 ### Comments
 - `GET /api/comments/version/{versionId}` - Get comments
@@ -2039,11 +2043,3 @@ const handleFileSelect = (event) => {
 | **Advisor** | ✅ Own students only | Document's `advisorUserId` must match |
 | **Admin** | ✅ Any student | No restrictions |
 | **Student** | ❌ Cannot create | - |
-
-### Version Visibility
-
-| Rule | Limit |
-|------|-------|
-| **Version Count** | Last 2 versions only |
-| **Who Can View** | Owner, Advisor, Admin |
-| **Older Versions** | Kept in database but not displayed |

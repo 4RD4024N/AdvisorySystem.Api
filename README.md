@@ -25,10 +25,12 @@
 - Dosya indirme
 - Doküman arama ve filtreleme
 
-### 3. Danışman Sistemi
-- Danışman atama
-- Danışman-öğrenci eşleştirme
-- Danışman listesi
+### 3. Danışman Sistemi (v3.0 - Simplified)
+- ✨ **Admin-only** öğretmen atama paneli
+- Admin tüm öğrencileri görebilir (öğretmen bilgisiyle)
+- Basit öğretmen atama/güncelleme/kaldırma
+- Otomatik bildirimler (öğrenci + öğretmen)
+- E-posta ile öğrenci arama
 
 ### 4. Yorum ve Geri Bildirim
 - Doküman versiyonlarına yorum ekleme
@@ -233,9 +235,11 @@ https://localhost:7175/swagger
 - `GET /api/documents/{id}/versions` - Versiyon listesi
 - `GET /api/documents/download/{versionId}` - Dosya indir
 
-### Danışmanlar
-- `GET /api/advisors` - Tüm danışmanları listele
-- `POST /api/advisors/assign` - Danışman ata (Admin/Advisor)
+### Danışmanlar (Admin Only - v3.0)
+- `GET /api/advisors` - Tüm öğretmenleri listele
+- `POST /api/advisors/assign` - Öğrenciye öğretmen ata/güncelle **SIMPLIFIED v3.0**
+- `DELETE /api/advisors/remove/{studentId}` - Öğretmen atamasını kaldır **SIMPLIFIED v3.0**
+- `GET /api/advisors/{advisorId}` - Öğretmen detayları ve öğrencileri **NEW v3.0**
 
 ### Yorumlar
 - `GET /api/comments/version/{versionId}` - Yorumları listele
@@ -251,6 +255,7 @@ https://localhost:7175/swagger
 ### Öğrenci Yönetimi (Admin/Advisor)
 - `GET /api/students` - Tüm öğrenciler (arama desteği)
 - `GET /api/students/{id}` - Öğrenci detayları
+- `GET /api/students/my-students` - Öğretmenin kendi öğrencileri (Advisor) **NEW v3.0**
 - `POST /api/students/{id}/send-notification` - Öğrenciye bildirim gönder
 - `POST /api/students/send-bulk-notification` - Toplu bildirim
 - `POST /api/students/send-notification-to-all` - Herkese bildirim
@@ -651,10 +656,16 @@ az container create --resource-group AdvisorySystemRG \
 - **Presentation Summary:** [PRESENTATION_SUMMARY.md](PRESENTATION_SUMMARY.md)
 - **Use Cases & Requirements:** [USE_CASE_SUMMARY.md](USE_CASE_SUMMARY.md)
 - **API Guide:** [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+- ✨ **Admin Advisor Management (v3.0):** [ADMIN_ADVISOR_MANAGEMENT_API.md](ADMIN_ADVISOR_MANAGEMENT_API.md) **YENİ - SIMPLIFIED**
 - **Students API:** [STUDENTS_API_GUIDE.md](STUDENTS_API_GUIDE.md)
 - **Token Refresh:** [TOKEN_REFRESH_QUICK_GUIDE.md](TOKEN_REFRESH_QUICK_GUIDE.md)
-- **Monitoring Fix:** [MONITORING_FIX_GUIDE.md](MONITORING_FIX_GUIDE.md)
+- **ER Diagram:** [ER_DIAGRAM.html](ER_DIAGRAM.html) **v2.1**
 - **Swagger:** `https://localhost:7175/swagger`
+
+### Archived (Old Versions)
+- ~~Advisor API (v2.1)~~ → Replaced by v3.0
+- ~~Advisor Assignment Guide~~ → Replaced by v3.0
+- ~~Advisor Assignment Summary~~ → Replaced by v3.0
 
 ---
 
@@ -691,5 +702,13 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 ---
 
 **Proje Durumu:** 🟢 Active Development  
-**Son Güncelleme:** 2025-01-06  
-**Versiyon:** 1.0.0
+**Son Güncelleme:** 2024-12-20  
+**Versiyon:** 3.0.0
+
+**🆕 v3.0.0 Yeni Özellikler (Simplified):**
+- ✅ **Admin-only** öğretmen atama sistemi
+- ✅ Basitleştirilmiş API (4 ana endpoint)
+- ✅ Tam öğrenci listesi (advisor bilgisiyle)
+- ✅ Tek endpoint ile atama/güncelleme
+- ✅ Hazır admin UI örneği (HTML/CSS/JS)
+- ✅ Otomatik bildirimler (update durumunda 3 taraf)
