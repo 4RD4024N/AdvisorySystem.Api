@@ -45,120 +45,175 @@ _users = users;
     [HttpGet("my")]
     public async Task<IActionResult> GetMySubmissions()
     {
-     try
+        try
         {
-      var uid = GetUserId();
-        if (string.IsNullOrEmpty(uid))
-      return Unauthorized(new { error = "User identification failed" });
+  var uid = GetUserId();
+       if (string.IsNullOrEmpty(uid))
+     return Unauthorized(new { error = "User identification failed" });
 
-            // Check if user is Admin or Advisor
-            var isAdmin = User.IsInRole("Admin");
-            var isAdvisor = User.IsInRole("Advisor");
+    // Check if user is Admin or Advisor
+        var isAdmin = User.IsInRole("Admin");
+var isAdvisor = User.IsInRole("Advisor");
 
-        List<Submission> submissions;
+     List<Submission> submissions;
 
-            if (isAdmin || isAdvisor)
-    {
-    // Admin/Advisor can see all submissions
-                submissions = await _db.Submissions
-          .OrderBy(s => s.DueDate)
+         if (isAdmin)
+          {
+    // Admin can see all submissions
+     submissions = await _db.Submissions
+   .OrderBy(s => s.DueDate)
           .ToListAsync();
       }
-        else
-        {
-    // Students see only their submissions
-      submissions = await _db.Submissions
-    .Where(s => s.StudentId == uid)
-          .OrderBy(s => s.DueDate)
-         .ToListAsync();
-            }
+ else if (isAdvisor)
+{
+         // Advisor can only see their students' submissions
+          var myStudentIds = await _users.Users
+           .Where(u => u.AdvisorId == uid)
+         .Select(u => u.Id)
+       .ToListAsync();
+
+submissions = await _db.Submissions
+   .Where(s => myStudentIds.Contains(s.StudentId))
+       .OrderBy(s => s.DueDate)
+  .ToListAsync();
+ }
+ else
+     {
+         // Students see only their submissions
+   submissions = await _db.Submissions
+  .Where(s => s.StudentId == uid)
+     .OrderBy(s => s.DueDate)
+ .ToListAsync();
+ }
 
    return Ok(submissions);
         }
-      catch (Exception ex)
+   catch (Exception ex)
         {
-      return StatusCode(500, new { error = "Failed to retrieve submissions", details = ex.Message });
+   return StatusCode(500, new { error = "Failed to retrieve submissions", details = ex.Message });
         }
     }
 
-    // Yeni teslim tarihi oluþtur - Danýþman öðrenciye belge için teslim tarihi belirler
+// Create new submission - Advisor assigns deadline to student
     [HttpPost]
     [Authorize(Roles = "Advisor,Admin")]
     public async Task<IActionResult> Create([FromBody] CreateSubmissionDto dto)
     {
         try
-        {
+     {
    var uid = GetUserId();
-if (string.IsNullOrEmpty(uid))
-     return Unauthorized();
+   if (string.IsNullOrEmpty(uid))
+       return Unauthorized();
 
-   // Öðrenci var mý kontrol et
-     var student = await _users.FindByIdAsync(dto.StudentId);
-    if (student == null)
-       return NotFound(new { error = "Student not found" });
+   var isAdmin = User.IsInRole("Admin");
 
-        // Doküman varsa kontrol et
-            if (dto.DocumentId.HasValue)
+   // Find student by ID or Email
+AppUser? student = null;
+        
+        if (!string.IsNullOrEmpty(dto.StudentId))
       {
-         var doc = await _db.Documents.FindAsync(dto.DocumentId.Value);
-    if (doc == null)
+          student = await _users.FindByIdAsync(dto.StudentId);
+    }
+    else if (!string.IsNullOrEmpty(dto.StudentEmail))
+            {
+   student = await _users.FindByEmailAsync(dto.StudentEmail);
+            }
+      
+        if (student == null)
+        return NotFound(new { error = "Student not found. Please provide valid student ID or email." });
+
+        // Verify user is a student
+            if (!await _users.IsInRoleAsync(student, "Student"))
+ {
+        return BadRequest(new { error = "User is not a student" });
+   }
+
+        // Advisor can only create submissions for their own students
+  if (!isAdmin && student.AdvisorId != uid)
+     {
+       return Forbid();
+    }
+
+      // Check document if provided
+  if (dto.DocumentId.HasValue)
+     {
+var doc = await _db.Documents.FindAsync(dto.DocumentId.Value);
+        if (doc == null)
      return NotFound(new { error = "Document not found" });
 
-     // Danýþman sadece kendi öðrencisine teslim atayabilir
-  if (User.IsInRole("Advisor") && doc.AdvisorUserId != uid)
-    return Forbid();
-}
+         // Document must belong to the student
+    if (doc.OwnerUserId != student.Id)
+     {
+  return BadRequest(new { error = "Document does not belong to the specified student" });
+          }
+     }
 
-   var submission = new Submission
-            {
-    StudentId = dto.StudentId,
-      DocumentId = dto.DocumentId,
- DueDate = dto.DueDate,
-            Status = "Pending",
-      CreatedByUserId = uid,
-       Notes = dto.Notes
-     };
-      
-      _db.Submissions.Add(submission);
-       await _db.SaveChangesAsync();
-
-     // Bildirim oluþtur
-  await CreateDeadlineNotification(dto.StudentId, submission.Id, dto.DueDate);
-
-    return Ok(new { 
-        submission.Id,
-        message = "Submission deadline created successfully"
-            });
-  }
-  catch (Exception ex)
-   {
-        return StatusCode(500, new { error = "Failed to create submission", details = ex.Message });
-    }
-    }
-
- private async Task CreateDeadlineNotification(string studentId, int submissionId, DateTime dueDate)
-    {
-  try
+            var submission = new Submission
 {
-    var notification = new Notification
-            {
-       UserId = studentId,
-   Title = "New Submission Deadline",
-        Message = $"You have a new submission deadline: {dueDate:dd/MM/yyyy HH:mm}",
-  Type = NotificationType.DeadlineApproaching,
-    RelatedEntityId = submissionId.ToString(),
-       RelatedEntityType = "Submission",
-       IsRead = false
-       };
+ StudentId = student.Id,
+    DocumentId = dto.DocumentId,
+DueDate = dto.DueDate,
+       Status = "Pending",
+     CreatedByUserId = uid,
+   Notes = dto.Notes
+    };
 
-     _db.Notifications.Add(notification);
-            await _db.SaveChangesAsync();
-  }
- catch
-        {
-    // Bildirim hatasý ana iþlemi etkilemez
- }
+     _db.Submissions.Add(submission);
+     await _db.SaveChangesAsync();
+
+            // Create notification
+         await CreateDeadlineNotification(student.Id, submission.Id, dto.DueDate, dto.Notes);
+
+          return Ok(new
+            {
+                submission.Id,
+          studentId = student.Id,
+studentEmail = student.Email,
+        message = $"Submission deadline created successfully for {student.Email}"
+       });
+}
+        catch (Exception ex)
+  {
+       return StatusCode(500, new { error = "Failed to create submission", details = ex.Message });
+   }
     }
 
-    public record CreateSubmissionDto(string StudentId, int? DocumentId, DateTime DueDate, string? Notes);
+ private async Task CreateDeadlineNotification(string studentId, int submissionId, DateTime dueDate, string? notes)
+    {
+        try
+     {
+         var message = $"You have a new submission deadline: {dueDate:dd/MM/yyyy HH:mm}";
+ if (!string.IsNullOrEmpty(notes))
+       {
+    message += $"\n\nNotes: {notes}";
+      }
+
+      var notification = new Notification
+ {
+  UserId = studentId,
+     Title = "New Submission Deadline",
+Message = message,
+    Type = NotificationType.DeadlineApproaching,
+  RelatedEntityId = submissionId.ToString(),
+  RelatedEntityType = "Submission",
+  IsRead = false
+   };
+
+  _db.Notifications.Add(notification);
+       await _db.SaveChangesAsync();
+        }
+        catch
+   {
+ // Notification error should not affect main operation
+     }
+    }
+
+    // DTO - Supports both studentId and studentEmail
+ public record CreateSubmissionDto(
+   string? StudentId,        // Optional: Student user ID
+        string? StudentEmail,     // Optional: Student email
+        int? DocumentId,          // Optional: Related document
+        DateTime DueDate,     // Required: Deadline
+        string? Notes          // Optional: Notes for student
+    );
 }

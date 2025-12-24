@@ -25,9 +25,12 @@
 - Dosya indirme
 - Doküman arama ve filtreleme
 
-### 3. Danışman Sistemi (v3.0 - Simplified)
+### 3. Danışman Sistemi (v3.1 - Authorization Restricted)
 - ✨ **Admin-only** öğretmen atama paneli
+- ✨ **Advisor-only** kendi öğrencilerine erişim (v3.1)
 - Admin tüm öğrencileri görebilir (öğretmen bilgisiyle)
+- Advisor sadece kendi öğrencilerini görebilir, bildirim gönderebilir
+- Advisor kendi öğrencilerine submission atayabilir (notes ile)
 - Basit öğretmen atama/güncelleme/kaldırma
 - Otomatik bildirimler (öğrenci + öğretmen)
 - E-posta ile öğrenci arama
@@ -703,8 +706,16 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 
 **Proje Durumu:** 🟢 Active Development  
 **Son Güncelleme:** 2024-12-20  
+**Versiyon:** 2.1.0
 **Versiyon:** 3.0.0
+**Versiyon:** 3.1.0
 
+**🆕 v2.1.0 Yeni Özellikler:**
+- ✅ Öğrencilere doğrudan öğretmen atama sistemi
+- ✅ Admin e-posta ile öğrenci arama
+- ✅ Öğretmen-öğrenci ilişkisi (AppUser.AdvisorId)
+- ✅ 4 yeni API endpoint'i
+- ✅ Güncellenmiş ER diyagramı
 **🆕 v3.0.0 Yeni Özellikler (Simplified):**
 - ✅ **Admin-only** öğretmen atama sistemi
 - ✅ Basitleştirilmiş API (4 ana endpoint)
@@ -712,3 +723,12 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 - ✅ Tek endpoint ile atama/güncelleme
 - ✅ Hazır admin UI örneği (HTML/CSS/JS)
 - ✅ Otomatik bildirimler (update durumunda 3 taraf)
+
+**🆕 v3.1.0 Yeni Özellikler (Authorization Restricted):**
+- ✅ **Advisor yetkiler kısıtlandı** - Sadece kendi öğrencilerine erişim
+- ✅ Advisor kendi öğrencilerini görüntüleyebilir
+- ✅ Advisor kendi öğrencilerine bildirim gönderebilir
+- ✅ Advisor kendi öğrencilerinin dokümanlarını görebilir
+- ✅ Advisor kendi öğrencilerine submission atayabilir (notes ile)
+- ✅ Toplu bildirim/rapor endpoints Admin-only
+- ✅ Submission notes özelliği eklendi
