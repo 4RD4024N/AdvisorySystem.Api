@@ -17,21 +17,38 @@ namespace AdvisorySystem.Api.Data
         public DbSet<CourseRequirement> CourseRequirements { get; set; } = null!;
         public DbSet<StudentCourse> StudentCourses { get; set; } = null!;
         public DbSet<DocumentRating> DocumentRatings { get; set; } = null!;
+        public DbSet<Course> Courses { get; set; } = null!;
+        public DbSet<CourseCategory> CourseCategories { get; set; } = null!;
+        public DbSet<Prerequisite> Prerequisites { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder b)
         {
             base.OnModelCreating(b);
 
-            // YENİ: AppUser (Student) -> Advisor relationship
             b.Entity<AppUser>()
                 .HasOne(u => u.Advisor)
                 .WithMany()
                 .HasForeignKey(u => u.AdvisorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            b.Entity<Course>()
+                .HasIndex(c => c.CourseCode)
+                .IsUnique();
+
+            b.Entity<Prerequisite>()
+                .HasOne<Course>()
+                .WithMany()
+                .HasForeignKey(p => p.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.Entity<Prerequisite>()
+                .HasOne<Course>()
+                .WithMany()
+                .HasForeignKey(p => p.PrerequisiteCourseId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 
-    // Var olan entity'lerin kısaltılmış halleri
     public class Document
     {
         public int Id { get; set; }
@@ -81,7 +98,6 @@ namespace AdvisorySystem.Api.Data
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
-    // Öğrenci profil ve ön koşul kontrolü için yeni entity'ler
     public class StudentProfile
     {
         public int Id { get; set; }
@@ -111,14 +127,16 @@ namespace AdvisorySystem.Api.Data
     {
         public int Id { get; set; }
         public string StudentId { get; set; } = "";
-        public int CourseRequirementId { get; set; }
-        public CourseRequirement CourseRequirement { get; set; } = default!;
+        public int CourseId { get; set; }
+        public Course Course { get; set; } = default!;
+        public int? Semester { get; set; }
         public bool IsCompleted { get; set; } = false;
         public double? Grade { get; set; }
+        public string? LetterGrade { get; set; }
         public DateTime? CompletionDate { get; set; }
+        public DateTime EnrolledAt { get; set; } = DateTime.UtcNow;
     }
 
-    // Danışman değerlendirme ve puanlama
     public class DocumentRating
     {
         public int Id { get; set; }
@@ -128,5 +146,38 @@ namespace AdvisorySystem.Api.Data
         public int Score { get; set; } // 1-100 arası puan
         public string? Comments { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    public class Course
+    {
+        public int Id { get; set; }
+        public string CourseCode { get; set; } = "";
+        public string CourseName { get; set; } = "";
+        public int TheoryHours { get; set; }
+        public int PracticeHours { get; set; }
+        public int Credits { get; set; }
+        public int ECTS { get; set; }
+        public int CategoryId { get; set; }
+        public CourseCategory Category { get; set; } = default!;
+        public int? Semester { get; set; }
+        public bool IsElective { get; set; } = false;
+        public string? Description { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    public class CourseCategory
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public int DisplayOrder { get; set; }
+    }
+
+    public class Prerequisite
+    {
+        public int Id { get; set; }
+        public int CourseId { get; set; }
+        public int PrerequisiteCourseId { get; set; }
+        public bool IsMandatory { get; set; } = true;
     }
 }

@@ -180,12 +180,17 @@ GET    /api/students/my-students     (Advisor)
 
 ## 🔄 Changelog
 
-### v3.1.1 (2025-01-06)
+### v3.1.1 (2025-01-06) - Latest
+- ✅ **Comment 403 Fix** - Advisors can now comment on student documents
+- ✅ **Rating 403 Fix** - Advisors can now rate student documents (1-100 score)
 - ✅ Submission creation with **email** support
 - ✅ Notes field in submissions
-- ✅ Improved documentation
+- ✅ **Documentation cleanup** - 85% reduction (40+ files → 9 files)
+- ✅ **Code cleanup** - Removed 100+ unnecessary comments
+- ✅ Improved error messages and logging
+- ✅ All authorization fixed to use v3.1 model (`AppUser.AdvisorId`)
 
-### v3.1.0 (2025-01-06)
+### v3.1.0 (2025-01-05)
 - ✅ **Restricted advisor permissions**
 - ✅ Advisors can only access own students
 - ✅ Admin-only endpoints added

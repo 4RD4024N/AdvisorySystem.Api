@@ -1,380 +1,315 @@
-# ?? Database Reset & Rebuild Complete!
+# ?? Database Reset - Complete (2025-01-06)
 
-## ? Actions Performed
-
-### 1. EF Core Tools Installation
-```bash
-dotnet tool install --global dotnet-ef --version 8.0.0
-```
-**Status:** ? Success
+**Date:** 2025-01-06  
+**Action:** Database dropped and recreated from scratch  
+**Status:** ? SUCCESS
 
 ---
 
-### 2. Database Drop
-```bash
+## ?? What Was Done
+
+### 1. Database Dropped
+```sh
 dotnet ef database drop --force
+? Successfully dropped database 'AdvisorySystemDB'
 ```
-**Status:** ? Successfully dropped database 'AdvisorySystemDB'
 
----
-
-### 3. Migrations Cleanup
-```bash
-Remove-Item -Path "Migrations" -Recurse -Force
-```
-**Status:** ? All old migrations removed
-
----
-
-### 4. New Migration Created
-```bash
-dotnet ef migrations add InitialCreate
-```
-**Status:** ? Migration '20251115160705_InitialCreate' created
-
----
-
-### 5. Database Creation
-```bash
+### 2. Database Recreated
+```sh
 dotnet ef database update
+? All 6 migrations applied successfully
 ```
-**Status:** ? Database created with all tables
 
 ---
 
-## ?? Database Tables Created
+## ?? Applied Migrations (In Order)
 
-Based on your models, the following tables should now exist:
+| # | Migration | Description | Status |
+|---|-----------|-------------|--------|
+| 1 | `InitialCreate` | Base tables (Documents, Users, etc.) | ? |
+| 2 | `AddStudentProfileAndRatingFeatures` | Student profiles + advisor ratings | ? |
+| 3 | `UpdateSubmissionAndFileValidation` | Submission improvements + notes | ? |
+| 4 | `AddStudentAdvisorRelationship` | v3.1 advisor system | ? |
+| 5 | `AddComprehensiveCourseSystem` | 117 courses + categories | ? |
+| 6 | `UpdateStudentCourseRelationship` | Student enrollment system | ? |
 
-### Identity Tables
-- `AspNetUsers` - User accounts
-- `AspNetRoles` - Roles (Student, Advisor, Admin)
-- `AspNetUserRoles` - User-Role mapping
-- `AspNetUserClaims` - User claims
-- `AspNetUserLogins` - External logins
-- `AspNetUserTokens` - Refresh tokens
-- `AspNetRoleClaims` - Role claims
+---
 
-### Application Tables
-- `Documents` - Student documents
-- `DocumentVersions` - Document file versions
-- `Comments` - Comments on document versions
-- `Submissions` - Submission deadlines
-- `Notifications` - User notifications
+## ?? Database Tables
+
+### Created Tables (Clean State)
+
+| Table | Purpose | Initial State |
+|-------|---------|---------------|
+| **AspNetUsers** | Identity users | Empty (will be seeded) |
+| **AspNetRoles** | Roles | Empty (will be seeded) |
+| **Documents** | Document management | Empty |
+| **DocumentVersions** | File versions | Empty |
+| **Comments** | Document comments | Empty |
+| **DocumentRatings** | Advisor ratings (1-100) | Empty |
+| **Submissions** | Deadline tracking | Empty |
+| **Notifications** | User notifications | Empty |
+| **StudentProfiles** | Student academic info | Empty |
+| **Courses** | Course catalog | Empty (will be seeded) |
+| **CourseCategories** | Course categories | Empty (will be seeded) |
+| **Prerequisites** | Course dependencies | Empty (will be seeded) |
+| **StudentCourses** | Student enrollments | Empty |
+| **CourseRequirements** | Legacy (not used) | Empty |
+
+---
+
+## ?? Auto-Seeding (On Next Startup)
+
+### IdentitySeeder
+**Will Create:**
+- 3 Roles: `Student`, `Advisor`, `Admin`
+- 1 Admin: `admin@local` / `Admin123!`
+- 3 Advisors: `advisor1-3@local` / `Advisor123!`
+- 3 Students: `student1-3@local` / `Student123!`
+
+### CourseSeeder
+**Will Create:**
+- 13 Course Categories
+- 117 Courses (all curriculum)
+- 13 Prerequisite relationships
 
 ---
 
 ## ?? Next Steps
 
-### 1. Run Application to Seed Data
-```bash
+### 1. Start Application
+```sh
 dotnet run
 ```
 
-This will automatically:
-- Create default roles (Student, Advisor, Admin)
-- Create default users:
-  - `admin@local` / `Admin123!` (Admin role)
-  - `stu@local` / `Arda123!` (Student role)
+### 2. Verify Logs
+Look for:
+```
+? Seeding identity data...
+? Seeding courses...
+? Done
+```
+
+### 3. Test Login
+```http
+POST https://localhost:7175/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@local",
+"password": "Admin123!"
+}
+```
+
+### 4. Verify Courses
+```http
+GET https://localhost:7175/api/courses
+Authorization: Bearer {token}
+```
+
+Expected: `{ "totalCount": 117, "courses": [...] }`
 
 ---
 
-### 2. Verify Database
+## ?? Default Test Users
 
-**SQL Server Management Studio / Azure Data Studio:**
+### Admin Account
+```
+Email: admin@local
+Password: Admin123!
+Role: Admin
+Permissions: Full access
+```
+
+### Advisor Accounts
+```
+advisor1@local / Advisor123!
+advisor2@local / Advisor123!
+advisor3@local / Advisor123!
+
+Role: Advisor
+Permissions: Manage own students
+```
+
+### Student Accounts
+```
+student1@local / Student123!
+student2@local / Student123!
+student3@local / Student123!
+
+Role: Student
+Permissions: View own data
+AdvisorId: null (initially unassigned)
+```
+
+---
+
+## ? Quick Verification
+
+### After Starting App
+
+1. **Check Users:**
 ```sql
--- Check tables
-SELECT TABLE_NAME 
-FROM INFORMATION_SCHEMA.TABLES 
-WHERE TABLE_TYPE = 'BASE TABLE'
-ORDER BY TABLE_NAME;
-
--- Check users
-SELECT * FROM AspNetUsers;
-
--- Check roles
-SELECT * FROM AspNetRoles;
-
--- Check user roles
-SELECT 
-    u.UserName,
-    r.Name as Role
-FROM AspNetUsers u
-JOIN AspNetUserRoles ur ON u.Id = ur.UserId
-JOIN AspNetRoles r ON ur.RoleId = r.Id;
+SELECT COUNT(*) FROM AspNetUsers; -- Expected: 7
+SELECT COUNT(*) FROM AspNetRoles; -- Expected: 3
 ```
 
-**Visual Studio SQL Server Object Explorer:**
-1. View ? SQL Server Object Explorer
-2. Expand (localdb)\MSSQLLocalDB
-3. Databases ? AdvisorySystemDB
-4. Tables (should see all tables listed above)
+2. **Check Courses:**
+```sql
+SELECT COUNT(*) FROM Courses; -- Expected: 117
+SELECT COUNT(*) FROM CourseCategories; -- Expected: 13
+SELECT COUNT(*) FROM Prerequisites; -- Expected: 13
+```
+
+3. **API Test:**
+```javascript
+// Login
+const res = await fetch('https://localhost:7175/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'admin@local',
+    password: 'Admin123!'
+  })
+});
+
+const { token } = await res.json();
+
+// Get courses
+const courses = await fetch('https://localhost:7175/api/courses', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+
+const data = await courses.json();
+console.log(`Total courses: ${data.totalCount}`); // Should be 117
+```
 
 ---
 
-### 3. Test API
+## ?? Common Setup Tasks
 
-**Basic Health Check:**
-```bash
-curl https://localhost:7175/api/health
+### 1. Assign Advisor to Student
+```http
+POST /api/advisors/assign-to-student
+Authorization: Bearer {admin-token}
+
+{
+  "studentEmail": "student1@local",
+  "advisorEmail": "advisor1@local"
+}
 ```
 
-**Login Test:**
-```bash
-curl -X POST https://localhost:7175/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "stu@local",
-    "password": "Arda123!"
-  }'
+### 2. Student Enrolls in Semester 1
+```javascript
+// Login as student1
+const token = await login('student1@local', 'Student123!');
+
+// Get semester 1 courses
+const sem1 = await api.get('/courses/by-semester/1');
+
+// Enroll in all semester 1 courses
+for (const course of sem1.data.courses) {
+  await api.post('/student-courses/enroll', {
+    courseId: course.id,
+    semester: 1
+  });
+}
 ```
 
-**Get Users (Debug):**
-```bash
-curl https://localhost:7175/api/debug/users
+### 3. Create First Document
+```javascript
+// Login as student
+const doc = await api.post('/documents', {
+  title: 'Thesis Proposal',
+  tags: 'thesis,research'
+});
+
+// Upload version
+const formData = new FormData();
+formData.append('file', pdfFile);
+formData.append('notes', 'Initial draft');
+
+await api.post(`/documents/${doc.data.id}/versions`, formData);
 ```
+
+---
+
+## ?? Database State Summary
+
+### Before Reset
+- ? Potentially inconsistent data
+- ? Test data mixed with old migrations
+- ? Unknown state
+
+### After Reset
+- ? Clean database
+- ? All latest migrations
+- ? Consistent structure
+- ? Ready for seeding
+- ? Production-ready schema
 
 ---
 
 ## ?? Troubleshooting
 
-### If Seed Data Doesn't Create
-
-**Check Program.cs:**
+### If seeders don't run:
+Check `Program.cs`:
 ```csharp
 try
 {
-    await IdentitySeeder.SeedAsync(app.Services);
+  await IdentitySeeder.SeedAsync(app.Services);
+    await CourseSeeder.SeedCoursesAsync(app.Services);
 }
 catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Error while seeding identity data");
+    logger.LogError(ex, "Error while seeding data");
 }
 ```
 
-**Manual Seed via Debug Endpoint:**
-```bash
-# This should automatically trigger on first run
-# Check logs for: "Seeding identity data..."
-```
-
----
-
-### If Tables Are Missing
-
-**Check Migration:**
-```bash
-# List migrations
-dotnet ef migrations list
-
-# Should show:
-# 20251115160705_InitialCreate (Applied)
-```
-
-**Verify AppDbContext.cs has all DbSets:**
+### If courses are missing:
 ```csharp
-public DbSet<Document> Documents { get; set; }
-public DbSet<DocumentVersion> DocumentVersions { get; set; }
-public DbSet<Comment> Comments { get; set; }
-public DbSet<Submission> Submissions { get; set; }
-public DbSet<Notification> Notifications { get; set; }
-```
-
----
-
-### If Connection String Issues
-
-**Check appsettings.json:**
-```json
+// CourseSeeder checks if courses exist
+if (await db.Courses.AnyAsync())
 {
-  "ConnectionStrings": {
-    "Default": "Server=(localdb)\\MSSQLLocalDB;Database=AdvisorySystemDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
-  }
+    return; // Courses already seeded
 }
 ```
 
-**Test Connection:**
-```bash
-# In Visual Studio Package Manager Console
-Test-Connection -ComputerName (localdb)\MSSQLLocalDB
-```
-
----
-
-## ?? Database Schema
-
-### Documents Table
+To force re-seed, delete courses first:
 ```sql
-CREATE TABLE Documents (
-    Id INT PRIMARY KEY IDENTITY,
-    Title NVARCHAR(MAX) NOT NULL,
-    Tags NVARCHAR(MAX),
-    OwnerUserId NVARCHAR(450) NOT NULL,
-    AdvisorUserId NVARCHAR(450),
-    CreatedAt DATETIME2 NOT NULL,
-    FOREIGN KEY (OwnerUserId) REFERENCES AspNetUsers(Id),
-    FOREIGN KEY (AdvisorUserId) REFERENCES AspNetUsers(Id)
-)
+DELETE FROM StudentCourses;
+DELETE FROM Prerequisites;
+DELETE FROM Courses;
+DELETE FROM CourseCategories;
 ```
 
-### DocumentVersions Table
-```sql
-CREATE TABLE DocumentVersions (
-    Id INT PRIMARY KEY IDENTITY,
-    DocumentId INT NOT NULL,
-    VersionNo INT NOT NULL,
-    FileName NVARCHAR(MAX) NOT NULL,
-    StoragePath NVARCHAR(MAX) NOT NULL,
-    ContentType NVARCHAR(MAX),
-    Size BIGINT NOT NULL,
-Notes NVARCHAR(MAX),
-    UploadedByUserId NVARCHAR(450) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL,
-    FOREIGN KEY (DocumentId) REFERENCES Documents(Id) ON DELETE CASCADE,
-    FOREIGN KEY (UploadedByUserId) REFERENCES AspNetUsers(Id)
-)
-```
-
-### Comments Table
-```sql
-CREATE TABLE Comments (
-    Id INT PRIMARY KEY IDENTITY,
-    DocumentVersionId INT NOT NULL,
-    AuthorUserId NVARCHAR(450) NOT NULL,
-    Content NVARCHAR(MAX) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL,
-    FOREIGN KEY (DocumentVersionId) REFERENCES DocumentVersions(Id) ON DELETE CASCADE,
-    FOREIGN KEY (AuthorUserId) REFERENCES AspNetUsers(Id)
-)
-```
-
-### Submissions Table
-```sql
-CREATE TABLE Submissions (
-    Id INT PRIMARY KEY IDENTITY,
-    StudentId NVARCHAR(450) NOT NULL,
-    DueDate DATETIME2 NOT NULL,
-    Status NVARCHAR(50) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL,
-    FOREIGN KEY (StudentId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE
-)
-```
-
-### Notifications Table
-```sql
-CREATE TABLE Notifications (
-    Id INT PRIMARY KEY IDENTITY,
-    UserId NVARCHAR(450) NOT NULL,
-    Title NVARCHAR(MAX) NOT NULL,
-    Message NVARCHAR(MAX) NOT NULL,
-    Type INT NOT NULL,
-    IsRead BIT NOT NULL,
-    RelatedEntityId NVARCHAR(MAX),
-    RelatedEntityType NVARCHAR(MAX),
-    CreatedAt DATETIME2 NOT NULL,
-    FOREIGN KEY (UserId) REFERENCES AspNetUsers(Id) ON DELETE CASCADE
-)
-```
+Then restart application.
 
 ---
 
-## ? Verification Checklist
+## ?? Summary
 
-- [x] EF Core Tools installed
-- [x] Old database dropped
-- [x] Old migrations removed
-- [x] New migration created
-- [x] Database updated with new migration
-- [ ] Application running
-- [ ] Seed data created (admin@local, stu@local)
-- [ ] Can login with default users
-- [ ] All tables exist in database
-- [ ] Foreign keys working
-- [ ] Can create documents
-- [ ] Can add notifications
+**Database:** ? Dropped and recreated  
+**Migrations:** ? All 6 applied  
+**Tables:** ? 14+ tables created  
+**Seeders:** ? Will run on startup  
+**State:** ? Fresh and clean  
+**Next Step:** ?? `dotnet run`
 
 ---
 
-## ?? Quick Start Commands
+## ?? Important Notes
 
-```bash
-# 1. Run application
-dotnet run
-
-# 2. Check health
-curl https://localhost:7175/api/health
-
-# 3. Get seed info
-curl https://localhost:7175/api/debug/seedinfo
-
-# 4. List users
-curl https://localhost:7175/api/debug/users
-
-# 5. Login as student
-curl -X POST https://localhost:7175/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"stu@local","password":"Arda123!"}'
-
-# 6. Login as admin
-curl -X POST https://localhost:7175/api/auth/login \
--H "Content-Type: application/json" \
-  -d '{"email":"admin@local","password":"Admin123!"}'
-```
+1. **Seeders are idempotent** - They check if data exists before inserting
+2. **Default passwords** - All test users use pattern `{Role}123!`
+3. **No advisor assignments** - Students start without advisors
+4. **No enrollments** - Students start with empty programs
+5. **Clean slate** - Perfect for testing from scratch
 
 ---
 
-## ?? Expected Results
+**?? Your database is now completely fresh and ready!** ??
 
-### After Running Application
+**Run:** `dotnet run` to start and seed data automatically.
 
-**Console Logs:**
-```
-[Information] Seeding identity data...
-[Information] Creating roles: Student, Advisor, Admin
-[Information] Creating admin user: admin@local
-[Information] Creating student user: stu@local
-[Information] Seeding completed successfully
-[Information] Now listening on: https://localhost:7175
-[Information] Application started
-```
-
-**Database Content:**
-```
-AspNetRoles: 3 roles (Student, Advisor, Admin)
-AspNetUsers: 2 users (admin@local, stu@local)
-AspNetUserRoles: 2 mappings
-Documents: 0 (empty)
-DocumentVersions: 0 (empty)
-Comments: 0 (empty)
-Submissions: 0 (empty)
-Notifications: 0 (empty)
-```
-
----
-
-## ?? Success!
-
-Your database is now clean and ready to use!
-
-**Fresh start with:**
-- ? All tables created
-- ? Proper foreign keys
-- ? Identity system configured
-- ? Ready for seeding
-- ? No orphaned data
-- ? Clean migrations
-
----
-
-**Action Required:**
-1. Run `dotnet run`
-2. Test login with default users
-3. Start using the application!
-
----
-
-**Completed:** 2025-01-06  
-**Database:** AdvisorySystemDB  
-**Migration:** 20251115160705_InitialCreate  
-**Status:** ? Ready for Use

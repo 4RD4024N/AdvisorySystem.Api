@@ -179,7 +179,33 @@ try {
 
 ---
 
-### Issue 3: Creating Submission with Email
+### Issue 3: 403 Forbidden (Advisor cannot comment) ? FIXED
+
+**Problem:** Advisor gets 403 when trying to comment on student's document
+
+**Solution:** Fixed in v3.1.1 backend update
+
+**What Was Wrong:**
+- Authorization was using deprecated `document.AdvisorUserId` field
+- Now uses `student.AdvisorId` (v3.1 system)
+
+**No Frontend Changes Needed:**
+```javascript
+// This now works for advisors on their students' documents
+await api.post('/comments', {
+  documentVersionId: 12,
+  content: 'Good work!'
+});
+```
+
+**Who Can Comment:**
+- ? Admin (all documents)
+- ? Document owner (own documents)
+- ? Advisor (own students' documents only)
+
+---
+
+### Issue 4: Creating Submission with Email
 
 **Old Way (ID):**
 ```javascript
@@ -327,6 +353,144 @@ const CreateDeadline = () => {
     </form>
   );
 };
+```
+
+---
+
+## ?? For Advisors
+
+### View My Students
+```javascript
+const students = await api.get('/advisors/my-students');
+console.log(`I have ${students.data.totalStudents} students`);
+```
+
+### Rate Student Document
+```javascript
+// Rate a document version (1-100 score)
+await api.post('/ratings', {
+  documentVersionId: 12,
+  score: 85,
+  comments: 'Excellent work! Well-researched.'
+});
+```
+
+### Update Rating
+```javascript
+// Rating same version again updates existing rating
+await api.post('/ratings', {
+  documentVersionId: 12,
+  score: 90, // Updated score
+  comments: 'Even better after revisions!'
+});
+```
+
+### View My Ratings
+```javascript
+// Get all ratings I've given
+const advisorId = 'my-advisor-id';
+const ratings = await api.get(`/ratings/by-advisor/${advisorId}`);
+console.log(`Total ratings: ${ratings.data.totalRatings}`);
+console.log(`Average score: ${ratings.data.averageScore}`);
+```
+
+### Create Deadline for Student
+```javascript
+await api.post('/submissions', {
+  studentEmail: 'student@local',  // Can use email!
+  dueDate: '2025-02-01T23:59:59Z',
+  notes: 'Please complete chapter 3'
+});
+```
+
+### View Student's Documents
+```javascript
+// All my students' documents
+const docs = await api.get('/documents');
+```
+
+### Comment on Student's Document
+```javascript
+await api.post('/comments', {
+  documentVersionId: 12,
+  content: 'Please revise section 3'
+});
+```
+
+### Send Notification to Student
+```javascript
+await api.post(`/students/${studentId}/send-notification`, {
+  title: 'Document Review',
+  message: 'Your document has been reviewed',
+type: 1 // NotificationType.NewComment
+});
+```
+
+---
+
+## ?? For Students
+
+### View My Documents
+```javascript
+const docs = await api.get('/documents');
+```
+
+### Create Document
+```javascript
+await api.post('/documents', {
+  title: 'My Thesis',
+  tags: 'research,thesis,software'
+});
+```
+
+### Upload Version
+```javascript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('notes', 'Initial draft');
+
+await api.post(`/documents/${docId}/versions`, formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+```
+
+### View My Ratings
+```javascript
+// Get all ratings received on my documents
+const ratings = await api.get('/ratings/my-documents');
+
+// Example response structure
+ratings.data.forEach(doc => {
+  console.log(`${doc.documentTitle} - Version ${doc.versionNo}`);
+  doc.ratings.forEach(rating => {
+    console.log(`  Score: ${rating.score}/100`);
+    console.log(`Comments: ${rating.comments}`);
+  });
+});
+```
+
+### View Rating for Specific Version
+```javascript
+// Get ratings for a specific document version
+const ratings = await api.get(`/ratings/version/${versionId}`);
+
+if (ratings.data.hasRating) {
+  console.log(`Average Score: ${ratings.data.averageScore}`);
+  console.log(`Total Ratings: ${ratings.data.ratingCount}`);
+}
+```
+
+### View My Advisor
+```javascript
+const response = await api.get('/advisors/my-advisor');
+if (response.data.hasAdvisor) {
+  console.log('My advisor:', response.data.advisor.userName);
+}
+```
+
+### View My Submissions
+```javascript
+const submissions = await api.get('/submissions/my');
 ```
 
 ---

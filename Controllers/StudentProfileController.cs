@@ -162,59 +162,55 @@ if (profile == null)
     public async Task<IActionResult> CheckPrerequisites()
     {
         try
-        {
- var userId = GetUserId();
-     var profile = await _db.StudentProfiles.FirstOrDefaultAsync(sp => sp.UserId == userId);
+  {
+     var userId = GetUserId();
+       var profile = await _db.StudentProfiles.FirstOrDefaultAsync(sp => sp.UserId == userId);
 
-            if (profile == null)
-       {
-              return NotFound(new { error = "Profile not found. Please create a profile first." });
-      }
+    if (profile == null)
+            {
+       return NotFound(new { error = "Profile not found. Please create a profile first." });
+    }
 
-  // Get required courses
- var requiredCourses = await _db.CourseRequirements
- .Where(cr => cr.IsRequired)
-    .ToListAsync();
-
-     // Get student's completed courses
- var completedCourses = await _db.StudentCourses
-        .Where(sc => sc.StudentId == userId && sc.IsCompleted)
-                .Include(sc => sc.CourseRequirement)
+      var requiredCourses = await _db.Courses
+.Where(c => !c.IsElective && c.Semester.HasValue && c.Semester <= 6)
         .ToListAsync();
 
-            var totalRequiredCredits = requiredCourses.Sum(rc => rc.Credits);
-    var completedCredits = profile.CompletedCredits ?? 0;
+        var completedCourses = await _db.StudentCourses
+    .Where(sc => sc.StudentId == userId && sc.IsCompleted)
+   .Include(sc => sc.Course)
+           .ToListAsync();
 
-            // Check if prerequisites are met
-         var meetsPrerequisites = completedCredits >= totalRequiredCredits;
+       var totalRequiredCredits = requiredCourses.Sum(rc => rc.Credits);
+            var completedCredits = profile.CompletedCredits ?? 0;
 
-            // Update profile
-          profile.MeetsPrerequisites = meetsPrerequisites;
-       profile.UpdatedAt = DateTime.UtcNow;
-      await _db.SaveChangesAsync();
+var meetsPrerequisites = completedCredits >= totalRequiredCredits;
 
-   return Ok(new
-        {
-     meetsPrerequisites,
-                completedCredits,
-            requiredCredits = totalRequiredCredits,
-     completedCoursesCount = completedCourses.Count,
-    requiredCoursesCount = requiredCourses.Count,
- missingCredits = Math.Max(0, totalRequiredCredits - completedCredits),
-          gpa = profile.GPA,
-     message = meetsPrerequisites
+      profile.MeetsPrerequisites = meetsPrerequisites;
+ profile.UpdatedAt = DateTime.UtcNow;
+       await _db.SaveChangesAsync();
+
+            return Ok(new
+   {
+                meetsPrerequisites,
+        completedCredits,
+      requiredCredits = totalRequiredCredits,
+       completedCoursesCount = completedCourses.Count,
+   requiredCoursesCount = requiredCourses.Count,
+       missingCredits = Math.Max(0, totalRequiredCredits - completedCredits),
+      gpa = profile.GPA,
+         message = meetsPrerequisites
       ? "? You meet all prerequisites!"
-          : $"? Missing {totalRequiredCredits - completedCredits} credits"
-      });
-  }
-        catch (Exception ex)
-  {
-          _logger.LogError(ex, "Failed to check prerequisites");
-            return StatusCode(500, new { error = "Failed to check prerequisites", details = ex.Message });
+       : $"? Missing {totalRequiredCredits - completedCredits} credits"
+        });
         }
+      catch (Exception ex)
+        {
+  _logger.LogError(ex, "Failed to check prerequisites");
+          return StatusCode(500, new { error = "Failed to check prerequisites", details = ex.Message });
   }
+    }
 
-// DTOs
+    // DTOs
   public record StudentProfileDto(
         string? StudentNumber,
         string? Department,

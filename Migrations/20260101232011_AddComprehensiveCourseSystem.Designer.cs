@@ -4,6 +4,7 @@ using AdvisorySystem.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AdvisorySystem.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260101232011_AddComprehensiveCourseSystem")]
+    partial class AddComprehensiveCourseSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -298,11 +301,8 @@ namespace AdvisorySystem.Api.Migrations
                     b.Property<DateTime?>("CompletionDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CourseId")
+                    b.Property<int>("CourseRequirementId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("EnrolledAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<double?>("Grade")
                         .HasColumnType("float");
@@ -310,19 +310,13 @@ namespace AdvisorySystem.Api.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("LetterGrade")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("Semester")
-                        .HasColumnType("int");
-
                     b.Property<string>("StudentId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CourseId");
+                    b.HasIndex("CourseRequirementId");
 
                     b.ToTable("StudentCourses");
                 });
@@ -705,13 +699,13 @@ namespace AdvisorySystem.Api.Migrations
 
             modelBuilder.Entity("AdvisorySystem.Api.Data.StudentCourse", b =>
                 {
-                    b.HasOne("AdvisorySystem.Api.Data.Course", "Course")
+                    b.HasOne("AdvisorySystem.Api.Data.CourseRequirement", "CourseRequirement")
                         .WithMany()
-                        .HasForeignKey("CourseId")
+                        .HasForeignKey("CourseRequirementId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Course");
+                    b.Navigation("CourseRequirement");
                 });
 
             modelBuilder.Entity("AdvisorySystem.Api.Data.StudentProfile", b =>

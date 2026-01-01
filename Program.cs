@@ -151,11 +151,12 @@ var app = builder.Build();
 try
 {
     await IdentitySeeder.SeedAsync(app.Services);
+    await CourseSeeder.SeedCoursesAsync(app.Services);
 }
 catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "Error while seeding identity data");
+    logger.LogError(ex, "Error while seeding data");
 }
 
 app.UseSwagger();
