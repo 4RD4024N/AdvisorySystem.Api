@@ -5,6 +5,18 @@
 
 ---
 
+## ⚠️ ÖNEMLİ NOT
+
+Bu sistemde **öğrenciler advisor'a istek gönderemez**. Advisor ataması **sadece Admin tarafından** yapılır:
+
+- ❌ Student advisor'a istek gönderemez
+- ❌ Student advisor seçemez
+- ✅ **Admin** öğrenciye advisor atar
+- ✅ **Admin** advisor atamasını kaldırır
+- ✅ **Admin** advisor değiştirir
+
+---
+
 ## 🎯 Değişiklikler
 
 ### Önceki Sistem

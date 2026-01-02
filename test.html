@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advisory System Test</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+       max-width: 800px;
+  margin: 50px auto;
+            padding: 20px;
+        }
+      .container {
+          border: 1px solid #ccc;
+   padding: 20px;
+ margin: 20px 0;
+       border-radius: 5px;
+     }
+    button {
+            background: #007bff;
+        color: white;
+            border: none;
+            padding: 10px 20px;
+          cursor: pointer;
+         border-radius: 3px;
+      margin: 5px;
+     }
+        button:hover {
+      background: #0056b3;
+        }
+    .result {
+          background: #f8f9fa;
+      padding: 15px;
+         margin: 10px 0;
+       border-radius: 3px;
+       white-space: pre-wrap;
+     font-family: monospace;
+          max-height: 400px;
+  overflow-y: auto;
+        }
+        input, select {
+   padding: 8px;
+            margin: 5px;
+            width: 300px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+  }
+    </style>
+</head>
+<body>
+    <h1>?? Advisory System API Test</h1>
+    
+    <div class="container">
+        <h2>1. Login</h2>
+        <select id="userSelect">
+         <option value="admin@local">Admin</option>
+      <option value="advisor1@local">Advisor 1</option>
+            <option value="student1@local">Student 1</option>
+        </select>
+        <input type="password" id="password" value="Admin123!" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. Get Available Courses (Semester 1)</h2>
+     <button onclick="getCourses()">Get Courses</button>
+     <div id="coursesResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. Enroll in Course</h2>
+        <input type="number" id="courseId" placeholder="Course ID" value="5">
+      <input type="number" id="semester" placeholder="Semester" value="1">
+        <button onclick="enrollCourse()">Enroll</button>
+        <div id="enrollResult" class="result"></div>
+    </div>
+
+    <div class="container">
+     <h2>4. My Schedule</h2>
+        <button onclick="getMySchedule()">Get My Schedule</button>
+        <div id="scheduleResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://localhost:7175/api';
+   let token = '';
+
+    async function login() {
+ const email = document.getElementById('userSelect').value;
+  const password = document.getElementById('password').value;
+
+ try {
+           const response = await fetch(`${API_BASE}/auth/login`, {
+       method: 'POST',
+              headers: {
+       'Content-Type': 'application/json'
+         },
+             body: JSON.stringify({ email, password })
+     });
+
+  const data = await response.json();
+                
+   if (response.ok) {
+      token = data.token;
+         document.getElementById('loginResult').innerHTML = 
+  `<span class="success">? Login successful!</span>\n\nToken: ${token.substring(0, 50)}...`;
+  } else {
+     document.getElementById('loginResult').innerHTML = 
+    `<span class="error">? Login failed:</span>\n${JSON.stringify(data, null, 2)}`;
+    }
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = 
+           `<span class="error">? Error:</span> ${error.message}`;
+   }
+    }
+
+  async function getCourses() {
+            if (!token) {
+        alert('Please login first!');
+    return;
+         }
+
+        try {
+      const response = await fetch(`${API_BASE}/section-enrollment/available-courses/1`, {
+headers: {
+                'Authorization': `Bearer ${token}`
+          }
+        });
+
+         const data = await response.json();
+           
+   if (response.ok) {
+    document.getElementById('coursesResult').innerHTML = 
+              `<span class="success">? Found ${data.totalCourses} courses</span>\n\n${JSON.stringify(data, null, 2)}`;
+         } else {
+      document.getElementById('coursesResult').innerHTML = 
+  `<span class="error">? Failed:</span>\n${JSON.stringify(data, null, 2)}`;
+              }
+       } catch (error) {
+ document.getElementById('coursesResult').innerHTML = 
+              `<span class="error">? Error:</span> ${error.message}`;
+            }
+        }
+
+        async function enrollCourse() {
+            if (!token) {
+             alert('Please login first!');
+  return;
+   }
+
+        const courseId = parseInt(document.getElementById('courseId').value);
+      const semester = parseInt(document.getElementById('semester').value);
+
+  try {
+        const response = await fetch(`${API_BASE}/section-enrollment/enroll`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+     'Content-Type': 'application/json'
+  },
+            body: JSON.stringify({
+                courseId,
+             sectionCode: null,
+  semester
+      })
+         });
+
+       const data = await response.json();
+             
+              if (response.ok) {
+ document.getElementById('enrollResult').innerHTML = 
+        `<span class="success">? ${data.message}</span>\n\n${JSON.stringify(data, null, 2)}`;
+      } else {
+            document.getElementById('enrollResult').innerHTML = 
+                `<span class="error">? Failed:</span>\n${JSON.stringify(data, null, 2)}`;
+      }
+         } catch (error) {
+             document.getElementById('enrollResult').innerHTML = 
+   `<span class="error">? Error:</span> ${error.message}`;
+   }
+        }
+
+        async function getMySchedule() {
+            if (!token) {
+ alert('Please login first!');
+      return;
+   }
+
+   try {
+      const response = await fetch(`${API_BASE}/section-enrollment/my-schedule?semester=1`, {
+          headers: {
+             'Authorization': `Bearer ${token}`
+            }
+      });
+
+           const data = await response.json();
+       
+      if (response.ok) {
+        document.getElementById('scheduleResult').innerHTML = 
+   `<span class="success">? Schedule retrieved</span>\n\n${JSON.stringify(data, null, 2)}`;
+} else {
+             document.getElementById('scheduleResult').innerHTML = 
+      `<span class="error">? Failed:</span>\n${JSON.stringify(data, null, 2)}`;
+       }
+ } catch (error) {
+            document.getElementById('scheduleResult').innerHTML = 
+       `<span class="error">? Error:</span> ${error.message}`;
+ }
+        }
+
+        // Auto-fill password based on user selection
+        document.getElementById('userSelect').addEventListener('change', function() {
+            const email = this.value;
+    if (email.startsWith('admin')) {
+    document.getElementById('password').value = 'Admin123!';
+            } else if (email.startsWith('advisor')) {
+          document.getElementById('password').value = 'Advisor123!';
+            } else if (email.startsWith('student')) {
+      document.getElementById('password').value = 'Student123!';
+   }
+        });
+    </script>
+</body>
+</html>

@@ -72,50 +72,54 @@ if (profile == null)
     [Authorize(Roles = "Student,Admin")]
     public async Task<IActionResult> CreateOrUpdateProfile([FromBody] StudentProfileDto dto)
     {
- try
+        try
         {
-       var userId = GetUserId();
-         var profile = await _db.StudentProfiles.FirstOrDefaultAsync(sp => sp.UserId == userId);
+var userId = GetUserId();
+       var profile = await _db.StudentProfiles.FirstOrDefaultAsync(sp => sp.UserId == userId);
 
-         if (profile == null)
-            {
-    // Create new profile
-                profile = new StudentProfile
-        {
-         UserId = userId,
-  StudentNumber = dto.StudentNumber,
-    Department = dto.Department,
-        GPA = dto.GPA,
-       CompletedCredits = dto.CompletedCredits,
-        EnrollmentDate = dto.EnrollmentDate ?? DateTime.UtcNow
-       };
-     _db.StudentProfiles.Add(profile);
-         }
-  else
+            if (profile == null)
     {
-         // Update existing profile
-      profile.StudentNumber = dto.StudentNumber ?? profile.StudentNumber;
-   profile.Department = dto.Department ?? profile.Department;
-              profile.GPA = dto.GPA ?? profile.GPA;
-         profile.CompletedCredits = dto.CompletedCredits ?? profile.CompletedCredits;
-    profile.EnrollmentDate = dto.EnrollmentDate ?? profile.EnrollmentDate;
-     profile.UpdatedAt = DateTime.UtcNow;
+        // Create new profile
+          profile = new StudentProfile
+          {
+          UserId = userId,
+    FirstName = dto.FirstName,
+  LastName = dto.LastName,
+            StudentNumber = dto.StudentNumber,
+        Department = dto.Department,
+    GPA = dto.GPA,
+         CompletedCredits = dto.CompletedCredits,
+  EnrollmentDate = dto.EnrollmentDate ?? DateTime.UtcNow
+   };
+_db.StudentProfiles.Add(profile);
+      }
+        else
+            {
+     // Update existing profile
+       profile.FirstName = dto.FirstName ?? profile.FirstName;
+    profile.LastName = dto.LastName ?? profile.LastName;
+ profile.StudentNumber = dto.StudentNumber ?? profile.StudentNumber;
+  profile.Department = dto.Department ?? profile.Department;
+    profile.GPA = dto.GPA ?? profile.GPA;
+       profile.CompletedCredits = dto.CompletedCredits ?? profile.CompletedCredits;
+       profile.EnrollmentDate = dto.EnrollmentDate ?? profile.EnrollmentDate;
+      profile.UpdatedAt = DateTime.UtcNow;
+            }
+
+await _db.SaveChangesAsync();
+
+  return Ok(new
+  {
+      message = "Profile saved successfully",
+profile.Id,
+       profile.UserId
+            });
 }
-
-  await _db.SaveChangesAsync();
-
-            return Ok(new
-      {
-  message = "Profile saved successfully",
-      profile.Id,
-        profile.UserId
-});
-  }
         catch (Exception ex)
-        {
+  {
       _logger.LogError(ex, "Failed to save student profile");
-        return StatusCode(500, new { error = "Failed to save profile", details = ex.Message });
-        }
+       return StatusCode(500, new { error = "Failed to save profile", details = ex.Message });
+      }
     }
 
     // Get profile by student ID (Admin/Advisor)
@@ -211,8 +215,10 @@ var meetsPrerequisites = completedCredits >= totalRequiredCredits;
     }
 
     // DTOs
-  public record StudentProfileDto(
-        string? StudentNumber,
+    public record StudentProfileDto(
+  string? FirstName,
+        string? LastName,
+      string? StudentNumber,
         string? Department,
         double? GPA,
         int? CompletedCredits,

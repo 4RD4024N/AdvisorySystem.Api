@@ -4,6 +4,7 @@ using AdvisorySystem.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AdvisorySystem.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260101235155_AddCourseSchedulingSystem")]
+    partial class AddCourseSchedulingSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,8 +78,7 @@ namespace AdvisorySystem.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(MAX)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ECTS")
                         .HasColumnType("int");
@@ -181,20 +183,10 @@ namespace AdvisorySystem.Api.Migrations
                     b.Property<bool>("IsTheory")
                         .HasColumnType("bit");
 
-                    b.Property<int>("MaxCapacity")
-                        .HasColumnType("int");
-
                     b.Property<string>("RoomNumber")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("SectionCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("Semester")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SessionNumber")
                         .HasColumnType("int");
 
                     b.Property<TimeSpan>("StartTime")
@@ -410,50 +402,6 @@ namespace AdvisorySystem.Api.Migrations
                     b.ToTable("StudentCourses");
                 });
 
-            modelBuilder.Entity("AdvisorySystem.Api.Data.StudentCourseSection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CompletionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CourseId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("EnrolledAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<double?>("Grade")
-                        .HasColumnType("float");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LetterGrade")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SectionCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Semester")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StudentId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId");
-
-                    b.ToTable("StudentCourseSections");
-                });
-
             modelBuilder.Entity("AdvisorySystem.Api.Data.StudentProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -474,14 +422,8 @@ namespace AdvisorySystem.Api.Migrations
                     b.Property<DateTime?>("EnrollmentDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<double?>("GPA")
                         .HasColumnType("float");
-
-                    b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("MeetsPrerequisites")
                         .HasColumnType("bit");
@@ -848,17 +790,6 @@ namespace AdvisorySystem.Api.Migrations
                 });
 
             modelBuilder.Entity("AdvisorySystem.Api.Data.StudentCourse", b =>
-                {
-                    b.HasOne("AdvisorySystem.Api.Data.Course", "Course")
-                        .WithMany()
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Course");
-                });
-
-            modelBuilder.Entity("AdvisorySystem.Api.Data.StudentCourseSection", b =>
                 {
                     b.HasOne("AdvisorySystem.Api.Data.Course", "Course")
                         .WithMany()

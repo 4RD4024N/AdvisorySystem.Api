@@ -20,6 +20,9 @@ namespace AdvisorySystem.Api.Data
         public DbSet<Course> Courses { get; set; } = null!;
         public DbSet<CourseCategory> CourseCategories { get; set; } = null!;
         public DbSet<Prerequisite> Prerequisites { get; set; } = null!;
+        public DbSet<CourseSchedule> CourseSchedules { get; set; } = null!;
+        public DbSet<ScheduleConflict> ScheduleConflicts { get; set; } = null!;
+        public DbSet<StudentCourseSection> StudentCourseSections { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder b)
         {
@@ -34,6 +37,16 @@ namespace AdvisorySystem.Api.Data
             b.Entity<Course>()
                 .HasIndex(c => c.CourseCode)
                 .IsUnique();
+
+            // ✅ Description field için explicit Unicode configuration
+            b.Entity<Course>()
+                .Property(c => c.Description)
+                .HasColumnType("nvarchar(MAX)")
+                .IsUnicode(true)
+                .IsRequired(false);
+
+            b.Entity<CourseSchedule>()
+                .HasIndex(cs => new { cs.CourseId, cs.Semester, cs.DayOfWeek, cs.StartTime });
 
             b.Entity<Prerequisite>()
                 .HasOne<Course>()
@@ -103,6 +116,8 @@ namespace AdvisorySystem.Api.Data
         public int Id { get; set; }
         public string UserId { get; set; } = "";
         public AppUser? User { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
         public string? StudentNumber { get; set; }
         public string? Department { get; set; }
         public double? GPA { get; set; }
@@ -111,6 +126,8 @@ namespace AdvisorySystem.Api.Data
         public bool MeetsPrerequisites { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public string FullName => $"{FirstName} {LastName}".Trim();
     }
 
     public class CourseRequirement
@@ -163,6 +180,8 @@ namespace AdvisorySystem.Api.Data
         public bool IsElective { get; set; } = false;
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public int TotalWeeklyHours => TheoryHours + PracticeHours;
     }
 
     public class CourseCategory
@@ -179,5 +198,48 @@ namespace AdvisorySystem.Api.Data
         public int CourseId { get; set; }
         public int PrerequisiteCourseId { get; set; }
         public bool IsMandatory { get; set; } = true;
+    }
+
+    public class CourseSchedule
+    {
+        public int Id { get; set; }
+        public int CourseId { get; set; }
+        public Course Course { get; set; } = default!;
+        public int Semester { get; set; }
+        public string SectionCode { get; set; } = "A"; // A, B, C, D...
+        public DayOfWeek DayOfWeek { get; set; }
+        public TimeSpan StartTime { get; set; }
+        public TimeSpan EndTime { get; set; }
+        public string? RoomNumber { get; set; }
+        public string? InstructorName { get; set; }
+        public bool IsTheory { get; set; } = true;
+        public int SessionNumber { get; set; } = 1; // 1, 2, 3, 4 (for multi-session courses)
+        public int MaxCapacity { get; set; } = 50;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    public class StudentCourseSection
+    {
+        public int Id { get; set; }
+        public string StudentId { get; set; } = "";
+        public int CourseId { get; set; }
+        public Course Course { get; set; } = default!;
+        public string SectionCode { get; set; } = "A";
+        public int Semester { get; set; }
+        public DateTime EnrolledAt { get; set; } = DateTime.UtcNow;
+        public bool IsCompleted { get; set; } = false;
+        public double? Grade { get; set; }
+        public string? LetterGrade { get; set; }
+        public DateTime? CompletionDate { get; set; }
+    }
+
+    public class ScheduleConflict
+    {
+        public int Id { get; set; }
+        public int Schedule1Id { get; set; }
+        public int Schedule2Id { get; set; }
+        public string ConflictType { get; set; } = "";
+        public string Description { get; set; } = "";
+        public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
     }
 }

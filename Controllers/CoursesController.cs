@@ -11,7 +11,7 @@ namespace AdvisorySystem.Api.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly AppDbContext _db;
- private readonly ILogger<CoursesController> _logger;
+    private readonly ILogger<CoursesController> _logger;
 
     public CoursesController(AppDbContext db, ILogger<CoursesController> logger)
     {
@@ -142,6 +142,43 @@ c.Category.Id,
         }
     }
 
+    // ?? TEST ENDPOINT - EF Core RAW DATA
+    [HttpGet("test/raw/{id}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetCourseRawTest(int id)
+    {
+        try
+     {
+       // Direct entity fetch (no projection)
+            var courseEntity = await _db.Courses
+       .Include(c => c.Category)
+           .FirstOrDefaultAsync(c => c.Id == id);
+
+          if (courseEntity == null)
+  return NotFound(new { error = "Course not found" });
+
+  // Return raw entity
+            return Ok(new
+       {
+        message = "RAW EF CORE DATA TEST",
+      entity = courseEntity,
+         descriptionTests = new
+   {
+        isNull = courseEntity.Description == null,
+     isEmpty = courseEntity.Description == "",
+             length = courseEntity.Description?.Length ?? 0,
+             hasData = !string.IsNullOrEmpty(courseEntity.Description),
+  preview = courseEntity.Description?.Substring(0, Math.Min(100, courseEntity.Description?.Length ?? 0))
+             }
+   });
+        }
+ catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get course raw test");
+            return StatusCode(500, new { error = "Failed to retrieve course", details = ex.Message });
+    }
+    }
+
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
     {
@@ -170,7 +207,7 @@ c.Category.Id,
 
     [HttpGet("by-semester/{semester}")]
     public async Task<IActionResult> GetCoursesBySemester(int semester)
-    {
+    {   
  try
     {
             var courses = await _db.Courses
@@ -357,4 +394,124 @@ catch (Exception ex)
   bool IsElective,
         string? Description
     );
+
+    [HttpGet("diagnostics")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetDiagnostics()
+    {
+        try
+        {
+            var totalCourses = await _db.Courses.CountAsync();
+            var totalCategories = await _db.CourseCategories.CountAsync();
+   
+     var categoriesWithCounts = await _db.CourseCategories
+         .Select(c => new
+          {
+    c.Id,
+          c.Name,
+      c.DisplayOrder,
+ CourseCount = _db.Courses.Count(course => course.CategoryId == c.Id)
+       })
+     .OrderBy(c => c.DisplayOrder)
+          .ToListAsync();
+
+        var coursesBySemester = await _db.Courses
+     .GroupBy(c => c.Semester)
+      .Select(g => new
+                {
+        Semester = g.Key,
+             Count = g.Count(),
+   RequiredCount = g.Count(c => !c.IsElective),
+ ElectiveCount = g.Count(c => c.IsElective)
+  })
+      .OrderBy(g => g.Semester)
+    .ToListAsync();
+
+            var electiveCourses = await _db.Courses
+    .Where(c => c.IsElective)
+        .CountAsync();
+
+   var requiredCourses = await _db.Courses
+        .Where(c => !c.IsElective)
+                .CountAsync();
+
+         // ? Açýklamalarý kontrol et
+    var coursesWithDescriptions = await _db.Courses
+      .Where(c => c.Description != null && c.Description != "")
+   .CountAsync();
+
+ var coursesWithoutDescriptions = await _db.Courses
+    .Where(c => c.Description == null || c.Description == "")
+       .CountAsync();
+
+            // ?? EF Core ile gerçek veriyi çek (RAW DATA TEST)
+   var rawDataTest = await _db.Courses
+      .OrderBy(c => c.CourseCode)
+      .Take(3)
+     .Select(c => new
+     {
+   c.Id,
+        c.CourseCode,
+   c.CourseName,
+        Description = c.Description, // Direct mapping
+     DescriptionLength = c.Description != null ? c.Description.Length : 0,
+      DescriptionPreview = c.Description != null ? c.Description.Substring(0, Math.Min(50, c.Description.Length)) : "NULL",
+           IsNull = c.Description == null,
+ IsEmpty = c.Description == "",
+            HasData = c.Description != null && c.Description != ""
+                })
+.ToListAsync();
+
+         // Sample courses with descriptions
+   var sampleCoursesWithDetails = await _db.Courses
+           .Include(c => c.Category)
+           .OrderBy(c => c.CourseCode)
+         .Take(5)
+        .Select(c => new
+            {
+           c.CourseCode,
+        c.CourseName,
+        c.Semester,
+       c.IsElective,
+       c.Description,
+            hasDescription = !string.IsNullOrEmpty(c.Description),
+        descriptionLength = c.Description != null ? c.Description.Length : 0,
+              category = c.Category.Name
+  })
+          .ToListAsync();
+
+         return Ok(new
+  {
+              summary = new
+              {
+            totalCourses,
+  totalCategories,
+            electiveCourses,
+   requiredCourses,
+      coursesWithDescriptions,
+            coursesWithoutDescriptions,
+          descriptionCoverage = totalCourses > 0 
+  ? Math.Round((double)coursesWithDescriptions / totalCourses * 100, 2) 
+          : 0
+                },
+ rawDataTest, // ?? Bu çok önemli - EF'in gerçekten ne okuduðunu gösterir
+           categoriesWithCounts,
+     coursesBySemester,
+    sampleCoursesWithDetails,
+     message = totalCourses == 0 
+     ? "?? NO COURSES FOUND! Database needs seeding." 
+       : coursesWithDescriptions == 0
+            ? $"?? Database has {totalCourses} courses but NO descriptions! Please reseed database."
+     : coursesWithDescriptions < totalCourses
+      ? $"?? Only {coursesWithDescriptions}/{totalCourses} courses have descriptions!"
+   : $"? Database has {totalCourses} courses with {coursesWithDescriptions} descriptions ({Math.Round((double)coursesWithDescriptions / totalCourses * 100, 2)}% coverage)"
+            });
+        }
+        catch (Exception ex)
+        {
+        _logger.LogError(ex, "Failed to get diagnostics");
+      return StatusCode(500, new { error = "Failed to get diagnostics", details = ex.Message });
+        }
+    }
+
 }

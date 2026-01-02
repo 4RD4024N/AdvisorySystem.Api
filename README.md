@@ -6,6 +6,19 @@
 
 ---
 
+## ⚠️ ÖNEMLİ: SİSTEM MİMARİSİ
+
+**Advisor Atama Sistemi:**
+- ❌ Öğrenciler advisor'a **istek gönderemez**
+- ❌ Öğrenciler advisor **seçemez**  
+- ❌ **Request/approval mekanizması YOK**
+- ✅ **Sadece Admin** öğrencilere advisor atar
+- ✅ Atama anında otomatik bildirimler gönderilir
+- ✅ Öğrenciler atanan advisor'ı görür
+- ✅ Advisor'lar kendilerine atanan öğrencileri yönetir
+
+---
+
 ## 🚀 Quick Start
 
 ```bash
@@ -44,13 +57,20 @@ https://localhost:7175/swagger
 - Search and filter capabilities
 
 ### 👨‍🏫 Advisor System (v3.1)
-- **Admin:** Assign advisors to students
-- **Advisor:** Manage own students only
+- **Admin-Controlled Assignment:**
+  - ✅ Admin assigns advisors to students
+  - ✅ Admin can change or remove advisors
+  - ✅ Auto-notifications on assignment
+  - ❌ Students cannot request or choose advisors
+- **Advisor Capabilities:**
+- View and manage assigned students only
   - View their documents
+  - Comment and rate documents (v3.1.1)
   - Send notifications
   - Create submissions with notes
-  - View submissions
-- **Student:** View assigned advisor
+- **Student View:**
+  - See assigned advisor
+  - Cannot request advisor change
 
 ### 📅 Submissions (Deadlines)
 - Create deadlines **by email or ID** (v3.1.1)

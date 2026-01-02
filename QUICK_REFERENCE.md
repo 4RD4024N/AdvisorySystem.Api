@@ -100,6 +100,27 @@ GET /api/advisors/my-advisor
 GET /api/students/my-students
 ```
 
+### 6. Courses (All Roles)
+```javascript
+// Get all courses (with filters)
+GET /api/courses?categoryId=1&semester=3&isElective=false&search=matematik
+
+// Get course details
+GET /api/courses/{id}
+
+// Get categories
+GET /api/courses/categories
+
+// Get courses by semester
+GET /api/courses/by-semester/3
+
+// Get elective courses
+GET /api/courses/electives
+
+// Get my enrolled courses (Student)
+GET /api/student-courses/my-program
+```
+
 ---
 
 ## ?? Authorization Rules (v3.1)
@@ -361,6 +382,7 @@ const CreateDeadline = () => {
 
 ### View My Students
 ```javascript
+// Advisors view students assigned BY ADMIN
 const students = await api.get('/advisors/my-students');
 console.log(`I have ${students.data.totalStudents} students`);
 ```

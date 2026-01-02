@@ -112,6 +112,7 @@ else
 }
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ICourseScheduler, CourseScheduler>();
 
 // Background service for deadline notifications
 builder.Services.AddHostedService<DeadlineNotificationService>();
@@ -152,6 +153,7 @@ try
 {
     await IdentitySeeder.SeedAsync(app.Services);
     await CourseSeeder.SeedCoursesAsync(app.Services);
+    await CourseScheduleSeeder.SeedSchedulesAsync(app.Services); // ? YENÝ: Schedule seeding
 }
 catch (Exception ex)
 {
