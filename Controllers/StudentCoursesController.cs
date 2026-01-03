@@ -36,7 +36,9 @@ _logger = logger;
  ?? throw new UnauthorizedAccessException("User ID not found");
     }
 
+    // ? ADMIN ERIÞEMEZ - Sadece Student/Advisor
     [HttpGet("my-program")]
+    [Authorize(Roles = "Student,Advisor")]
     public async Task<IActionResult> GetMyProgram()
   {
         try
@@ -91,22 +93,22 @@ _logger = logger;
         }
   }
 
+    // ? Advisor öðrencilerinin programýný görebilir, Admin YAPAMAZ
     [HttpGet("student/{studentId}")]
-    [Authorize(Roles = "Admin,Advisor")]
+    [Authorize(Roles = "Advisor")]
   public async Task<IActionResult> GetStudentProgram(string studentId)
     {
    try
         {
             var currentUserId = GetUserId();
-      var isAdmin = User.IsInRole("Admin");
-   var isAdvisor = User.IsInRole("Advisor");
 
-    var student = await _userManager.FindByIdAsync(studentId);
-            if (student == null)
-    return NotFound(new { error = "Student not found" });
+   var student = await _userManager.FindByIdAsync(studentId);
+      if (student == null)
+     return NotFound(new { error = "Student not found" });
 
-  if (isAdvisor && !isAdmin && student.AdvisorId != currentUserId)
-     return Forbid();
+   // Advisor sadece kendi öðrencilerini görebilir
+       if (student.AdvisorId != currentUserId)
+      return Forbid();
 
             var enrolledCourses = await _db.StudentCourses
            .Where(sc => sc.StudentId == studentId)
@@ -159,7 +161,9 @@ _logger = logger;
    }
     }
 
+    // ? ADMIN ERIÞEMEZ - Sadece Student
     [HttpPost("enroll")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> EnrollCourse([FromBody] EnrollCourseDto dto)
     {
     try
@@ -235,11 +239,12 @@ _logger = logger;
   }
     }
 
-    // ? YENÝ ENDPOINT: Öðrencinin Ders Programý
+    // ? ADMIN ERIÞEMEZ - Sadece Student
     [HttpGet("my-schedule")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> GetMySchedule([FromQuery] int? semester = null)
     {
-    try
+        try
 {
        var userId = GetUserId();
 
@@ -393,7 +398,9 @@ _logger.LogError(ex, "Failed to get student schedule");
 }
     }
 
+    // ? ADMIN ERIÞEMEZ - Sadece Student
   [HttpPatch("{enrollmentId}/complete")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> CompleteCourse(
         int enrollmentId,
   [FromBody] CompleteCourseDto dto)
@@ -450,7 +457,9 @@ catch (Exception ex)
   }
     }
 
+    // ? ADMIN ERIÞEMEZ - Sadece Student
     [HttpDelete("{enrollmentId}")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> Unenroll(int enrollmentId)
     {
         try

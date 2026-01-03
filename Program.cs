@@ -37,14 +37,16 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// CORS (frontend: Vite 5173, 5174)
+// CORS (frontend: Vite 5173, 5174, 5175, 44375)
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("frontend", p => p
 .WithOrigins(
         "http://localhost:5173", 
     "http://localhost:5174",
- "http://localhost:3000"
+ "http://localhost:5175",    // ? EKLENDÝ
+        "http://localhost:3000",
+        "https://localhost:44375"   // ? EKLENDÝ (HTTPS)
         ) 
         .AllowAnyHeader()
         .AllowAnyMethod()

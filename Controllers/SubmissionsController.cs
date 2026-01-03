@@ -87,8 +87,9 @@ return User.FindFirstValue(ClaimTypes.NameIdentifier)
         }
     }
 
+    // ? ADMIN SUBMISSION OLUÞTURAMAZ - Sadece Advisor
     [HttpPost]
-    [Authorize(Roles = "Advisor,Admin")]
+    [Authorize(Roles = "Advisor")]
     public async Task<IActionResult> Create([FromBody] CreateSubmissionDto dto)
     {
       try
@@ -97,29 +98,28 @@ return User.FindFirstValue(ClaimTypes.NameIdentifier)
 if (string.IsNullOrEmpty(uid))
   return Unauthorized();
 
-            var isAdmin = User.IsInRole("Admin");
-
-            AppUser? student = null;
+       AppUser? student = null;
 
             if (!string.IsNullOrEmpty(dto.StudentId))
  {
-     student = await _users.FindByIdAsync(dto.StudentId);
-            }
+student = await _users.FindByIdAsync(dto.StudentId);
+   }
    else if (!string.IsNullOrEmpty(dto.StudentEmail))
-            {
+    {
           student = await _users.FindByEmailAsync(dto.StudentEmail);
-            }
+       }
 
-        if (student == null)
+   if (student == null)
 return NotFound(new { error = "Student not found. Please provide valid student ID or email." });
 
-          if (!await _users.IsInRoleAsync(student, "Student"))
+    if (!await _users.IsInRoleAsync(student, "Student"))
   {
      return BadRequest(new { error = "User is not a student" });
         }
 
-          if (!isAdmin && student.AdvisorId != uid)
-      {
+    // Advisor sadece kendi öðrencilerine atayabilir
+       if (student.AdvisorId != uid)
+        {
         return Forbid();
      }
 

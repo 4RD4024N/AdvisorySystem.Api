@@ -1,0 +1,645 @@
+================================================================================
+          DERS PROGRAMI API ENTEGRASYON DOKÜMANTASYONU
+================================================================================
+
+Proje: AdvisorySystem.Api
+Tarih: 2025-01-09
+.NET Versiyon: 8.0
+API Versiyon: 1.0
+
+================================================================================
+ÖZET
+================================================================================
+
+Backend'de ders saatleri TAM SAATLERE (08:00, 09:00, 10:00...) güncellendi 
+ve her ders 60 dakika sürecek þekilde ayarlandý. Frontend'de bu deðiþikliklere 
+göre entegrasyon yapmanýz gerekiyor.
+
+================================================================================
+BACKEND API ENDPOINT
+================================================================================
+
+Endpoint:
+    GET /api/student-courses/my-schedule?semester={semester}
+
+Authorization:
+Authorization: Bearer {JWT_TOKEN}
+
+Query Parameters:
+    semester (integer, opsiyonel)
+        - Yarýyýl numarasý (1-8)
+        - Boþ býrakýlýrsa tüm yarýyýllar gelir
+
+HTTP Methods:
+  GET - Öðrencinin ders programýný getirir
+
+Roles Required:
+    Authenticated user (Student, Advisor, Admin)
+
+================================================================================
+RESPONSE FORMATI - BAÞARILI (200 OK)
+================================================================================
+
+{
+  "totalCourses": 3,
+  "completedCourses": 0,
+  "totalCredits": 18,
+  "totalECTS": 18,
+  "semester": "1",
+  "courses": [
+    {
+      "courseId": 1,
+ "courseCode": "BÝL101",
+      "courseName": "BÝLGÝSAYAR YAZILIMI I",
+      "description": "Bilgisayar yazýlýmý temelleri...",
+      "credits": 6,
+      "ects": 6,
+      "category": "Temel Bilgisayar Bilimleri",
+      "sectionCode": "A",
+      "semester": 1,
+      "isCompleted": false,
+      "grade": null,
+      "sessions": [
+   {
+          "scheduleId": 1,
+          "dayOfWeek": "Monday",
+          "dayOfWeekNumber": 1,
+          "dayName": "Pazartesi",
+  "startTime": "08:00",
+          "endTime": "09:00",
+          "timeSlot": "08:00-09:00",
+     "roomNumber": "A100",
+        "instructorName": "Prof. Dr. Ahmet Yýlmaz",
+    "isTheory": true,
+          "sessionType": "Teori",
+        "sessionNumber": 1,
+     "durationMinutes": 60
+        },
+        {
+    "scheduleId": 2,
+  "dayOfWeek": "Monday",
+        "dayOfWeekNumber": 1,
+   "dayName": "Pazartesi",
+        "startTime": "09:00",
+  "endTime": "10:00",
+          "timeSlot": "09:00-10:00",
+          "roomNumber": "A101",
+"instructorName": "Doç. Dr. Ayþe Demir",
+          "isTheory": true,
+          "sessionType": "Teori",
+          "sessionNumber": 2,
+          "durationMinutes": 60
+   }
+ ]
+    }
+  ],
+  "weeklySchedule": {
+    "Pazartesi": [
+      {
+     "courseId": 1,
+   "courseCode": "BÝL101",
+    "courseName": "BÝLGÝSAYAR YAZILIMI I",
+        "sectionCode": "A",
+        "startTime": "08:00",
+      "endTime": "09:00",
+"timeSlot": "08:00-09:00",
+        "roomNumber": "A100",
+        "instructorName": "Prof. Dr. Ahmet Yýlmaz",
+        "isTheory": true,
+   "sessionType": "Teori",
+        "durationMinutes": 60
+}
+    ],
+    "Salý": [],
+    "Çarþamba": [],
+    "Perþembe": [],
+    "Cuma": []
+  }
+}
+
+================================================================================
+RESPONSE FORMATI - HATA (500 INTERNAL SERVER ERROR)
+================================================================================
+
+{
+  "error": "Failed to retrieve schedule",
+  "details": "Detailed error message here"
+}
+
+================================================================================
+RESPONSE ALANLARI AÇIKLAMASI
+================================================================================
+
+ROOT OBJECT:
+------------
+totalCourses        (integer)  - Toplam kayýtlý ders sayýsý
+completedCourses    (integer)  - Tamamlanmýþ ders sayýsý
+totalCredits        (integer)  - Toplam kredi
+totalECTS(integer)  - Toplam ECTS
+semester     (string)   - Ýstenen yarýyýl ("1", "2"... veya "Tümü")
+courses (array)    - Detaylý ders listesi
+weeklySchedule      (object)   - Günlere göre haftalýk program
+
+COURSE OBJECT (courses[] içindeki her öðe):
+-------------------------------------------
+courseId         (integer)  - Dersin ID'si
+courseCode          (string)   - Ders kodu (örn: "BÝL101")
+courseName          (string)   - Ders adý
+description         (string)   - Ders açýklamasý
+credits  (integer)  - Kredi sayýsý
+ects    (integer)  - ECTS kredisi
+category            (string)   - Ders kategorisi
+sectionCode         (string)   - Þube kodu (örn: "A", "B")
+semester            (integer)  - Yarýyýl (1-8)
+isCompleted       (boolean)  - Ders tamamlandý mý?
+grade           (double?)  - Not (null olabilir)
+sessions         (array)    - Dersin tüm oturumlarý (gün-saat bazlý)
+
+SESSION OBJECT (sessions[] içindeki her öðe):
+---------------------------------------------
+Alan        Tip   Açýklama Örnek Deðer
+--------------------------------------------------------------------------------
+scheduleId       integer    Oturum ID'si       1
+dayOfWeek   string     Gün (Ýngilizce)  "Monday"
+dayOfWeekNumber      integer    Gün numarasý  1 (1=Pazartesi)
+dayName    string     Gün (Türkçe)              "Pazartesi"
+startTime            string     Baþlangýç saati (HH:mm)   "08:00"
+endTime              string     Bitiþ saati (HH:mm)    "09:00"
+timeSlot             string     Saat aralýðý   "08:00-09:00"
+roomNumber         string     Derslik         "A100"
+instructorName       string     Öðretim üyesi   "Prof. Dr. A. Yýlmaz"
+isTheory             boolean    Teorik ders mi?           true
+sessionType          string   Oturum tipi       "Teori" / "Uygulama"
+sessionNumber   integer    Oturum sýrasý             1
+durationMinutes      integer    Süre (dakika)    60 (HER ZAMAN)
+
+WEEKLY SCHEDULE OBJECT:
+-----------------------
+Pazartesi       array      Pazartesi günündeki tüm dersler
+Salý           arraySalý günündeki tüm dersler
+Çarþamba             array      Çarþamba günündeki tüm dersler
+Perþembe             array      Perþembe günündeki tüm dersler
+Cuma            array    Cuma günündeki tüm dersler
+
+Not: weeklySchedule içindeki her gün, Session Object formatýndaki 
+     objelerden oluþan bir array'dir.
+
+================================================================================
+FRONTEND SERVICE ÖRNEÐÝ
+================================================================================
+
+// courseService.js
+
+import api from './api'; // Axios instance
+
+export const courseService = {
+  /**
+   * Öðrencinin ders programýný getirir
+   * @param {number} semester - Yarýyýl numarasý (1-8)
+   * @returns {Promise<Object>} Ders programý verisi
+   */
+  getMySchedule: async (semester) => {
+    try {
+      const response = await api.get(
+        `/student-courses/my-schedule?semester=${semester}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('? Ders programý yüklenemedi:', error);
+      throw error;
+    }
+  }
+};
+
+================================================================================
+REACT HOOK ÝLE VERÝ ÇEKME ÖRNEÐÝ
+================================================================================
+
+import { useState, useEffect } from 'react';
+import { courseService } from '../services/courseService';
+
+const CourseSchedule = () => {
+  const [schedule, setSchedule] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [semester, setSemester] = useState(1);
+
+  useEffect(() => {
+    loadSchedule();
+  }, [semester]);
+
+  const loadSchedule = async () => {
+    try {
+      setLoading(true);
+      const data = await courseService.getMySchedule(semester);
+      
+      console.log('? Backend Response:', data);
+      console.log('?? Courses:', data.courses);
+      console.log('?? Weekly Schedule:', data.weeklySchedule);
+    
+      setSchedule(data);
+    } catch (error) {
+   console.error('? Hata:', error);
+      setSchedule({ 
+        weeklySchedule: {}, 
+        courses: [], 
+   totalCourses: 0 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div>Yükleniyor...</div>;
+
+  return (
+    <div>
+      <h1>Ders Programý - Yarýyýl {semester}</h1>
+      <p>Toplam {schedule.totalCourses} ders</p>
+      {/* ... */}
+    </div>
+  );
+};
+
+export default CourseSchedule;
+
+================================================================================
+HAFTALIK PROGRAM TABLOSU ÖRNEÐÝ
+================================================================================
+
+const WeeklyScheduleTable = ({ weeklySchedule }) => {
+  const days = ['Pazartesi', 'Salý', 'Çarþamba', 'Perþembe', 'Cuma'];
+  const timeSlots = [
+    '08:00', '09:00', '10:00', '11:00', '12:00',
+    '13:00', '14:00', '15:00', '16:00', '17:00'
+  ];
+
+  // Belirli gün ve saatte hangi ders var?
+  const getCourseAtSlot = (day, time) => {
+    if (!weeklySchedule[day]) return null;
+    
+    return weeklySchedule[day].find(session => 
+      session.startTime === time
+    );
+  };
+
+  return (
+    <table>
+      <thead>
+      <tr>
+          <th>Saat</th>
+          {days.map(day => <th key={day}>{day}</th>)}
+     </tr>
+      </thead>
+      <tbody>
+        {timeSlots.map(time => (
+          <tr key={time}>
+            <td>{time}</td>
+            {days.map(day => {
+    const session = getCourseAtSlot(day, time);
+        
+  return (
+           <td key={`${day}-${time}`}>
+         {session ? (
+          <div className="course-cell">
+       <strong>{session.courseCode}</strong>
+      <div>{session.courseName}</div>
+           <div>?? {session.roomNumber}</div>
+                 <div>????? {session.instructorName}</div>
+         <div>{session.timeSlot}</div>
+    </div>
+         ) : null}
+  </td>
+  );
+ })}
+     </tr>
+     ))}
+    </tbody>
+    </table>
+  );
+};
+
+================================================================================
+DERS LÝSTESÝ ÖRNEÐÝ
+================================================================================
+
+const CourseList = ({ courses }) => {
+  return (
+    <div>
+      <h2>Kayýtlý Derslerim</h2>
+      {courses.map(course => (
+     <div 
+          key={`${course.courseId}-${course.sectionCode}`} 
+      className="course-card"
+        >
+   <h3>{course.courseCode} - {course.courseName}</h3>
+          <p>{course.description}</p>
+        <p>
+         Þube: {course.sectionCode} | 
+            {course.credits} Kredi | 
+  {course.ects} ECTS
+          </p>
+       
+      <h4>Ders Saatleri:</h4>
+       {course.sessions.map((session, idx) => (
+   <div key={idx} className="session">
+       <strong>{session.dayName}:</strong> 
+     {session.timeSlot} | 
+      ?? {session.roomNumber} | 
+  {session.sessionType} | 
+              ????? {session.instructorName}
+            </div>
+     ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+================================================================================
+ÖNEMLÝ NOTLAR
+================================================================================
+
+1. ZAMAN FORMATI
+   ? Baþlangýç ve bitiþ saatleri TAM SAAT: "08:00", "09:00", "10:00" vb.
+   ? Her ders tam 60 dakika: durationMinutes her zaman 60
+   ? ESKÝ FORMAT KULLANMAYIN: "08:30", "10:20" gibi saatler artýk yok
+
+2. GÜN ÝSÝMLERÝ
+ - Backend Ýngilizce gün adý döner: dayOfWeek: "Monday"
+   - Backend Türkçe gün adý da döner: dayName: "Pazartesi"
+   - weeklySchedule objesi TÜRKÇE key'ler kullanýr
+
+3. RESPONSE YAPISI
+   - courses[]: Her dersin TÜM OTURUMLARI ile birlikte gelir
+   - weeklySchedule{}: GÜNLERE GÖRE gruplandýrýlmýþ, UI için hazýr format
+   - Her iki yapý da ayný veriyi içerir, kullaným amacýnýza göre seçin
+
+4. BOÞ DURUM
+   Eðer öðrenci hiçbir derse kayýtlý deðilse:
+   {
+     "totalCourses": 0,
+     "courses": [],
+     "weeklySchedule": {
+       "Pazartesi": [],
+       "Salý": [],
+     "Çarþamba": [],
+       "Perþembe": [],
+       "Cuma": []
+}
+   }
+
+5. HATA YÖNETÝMÝ
+   try {
+     const data = await courseService.getMySchedule(1);
+   } catch (error) {
+     if (error.response?.status === 401) {
+       // Token geçersiz - yeniden login
+       window.location.href = '/login';
+   } else if (error.response?.status === 500) {
+       // Sunucu hatasý
+       alert('Ders programý yüklenemedi.');
+     }
+   }
+
+================================================================================
+TEST SENARYOLARI
+================================================================================
+
+1. SWAGGER ÝLE TEST
+   1. https://localhost:7175/swagger adresine gidin
+   2. /api/student-courses/my-schedule endpoint'ini bulun
+   3. "Try it out" butonuna týklayýn
+   4. semester parametresine 1 yazýn
+   5. "Execute" butonuna basýn
+   6. Response'u inceleyin
+
+2. POSTMAN/THUNDER CLIENT ÝLE TEST
+   GET https://localhost:7175/api/student-courses/my-schedule?semester=1
+   Authorization: Bearer {YOUR_TOKEN}
+
+3. BROWSER CONSOLE ÝLE TEST
+   const token = 'YOUR_JWT_TOKEN';
+   
+   fetch('https://localhost:7175/api/student-courses/my-schedule?semester=1', {
+     headers: {
+       'Authorization': `Bearer ${token}`
+     }
+   })
+   .then(r => r.json())
+   .then(data => {
+     console.log('? Response:', data);
+     console.log('?? Total Courses:', data.totalCourses);
+  console.log('?? Weekly Schedule:', data.weeklySchedule);
+   });
+
+================================================================================
+TYPESCRIPT TYPE DEFINITIONS
+================================================================================
+
+interface ScheduleResponse {
+  totalCourses: number;
+  completedCourses: number;
+  totalCredits: number;
+  totalECTS: number;
+  semester: string;
+  courses: CourseDetail[];
+  weeklySchedule: WeeklySchedule;
+}
+
+interface CourseDetail {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  description: string;
+  credits: number;
+  ects: number;
+  category: string;
+  sectionCode: string;
+  semester: number;
+  isCompleted: boolean;
+  grade: number | null;
+  sessions: Session[];
+}
+
+interface Session {
+  scheduleId: number;
+  dayOfWeek: string;
+  dayOfWeekNumber: number;
+  dayName: string;
+  startTime: string;     // "HH:mm" format
+  endTime: string;          // "HH:mm" format
+  timeSlot: string;         // "HH:mm-HH:mm" format
+  roomNumber: string;
+  instructorName: string;
+  isTheory: boolean;
+  sessionType: 'Teori' | 'Uygulama';
+  sessionNumber: number;
+  durationMinutes: number;  // Her zaman 60
+}
+
+interface WeeklySchedule {
+  Pazartesi: Session[];
+  Salý: Session[];
+  Çarþamba: Session[];
+  Perþembe: Session[];
+  Cuma: Session[];
+}
+
+================================================================================
+ÖZET CHECKLIST
+================================================================================
+
+[ ] courseService.getMySchedule(semester) metodunu ekleyin
+[ ] Response'taki weeklySchedule objesini kullanýn (gün bazlý)
+[ ] veya courses[] array'ini kullanýn (ders bazlý)
+[ ] Saatlerin TAM SAAT (08:00, 09:00...) olduðunu unutmayýn
+[ ] durationMinutes her zaman 60 olacak
+[ ] Gün isimlerinde dayName (Türkçe) kullanýn
+[ ] Hata durumlarýný handle edin
+[ ] Test edin: Swagger / Postman / Browser Console
+
+================================================================================
+DATABASE BÝLGÝLERÝ (BACKEND)
+================================================================================
+
+TABLOLAR:
+---------
+- CourseSchedules: 155 kayýt (tam saatlerle: 08:00, 09:00, 10:00...)
+- StudentCourseSections: Öðrencinin kayýtlý olduðu þubeler
+- Courses: Ders bilgileri
+- CourseCategories: Ders kategorileri
+
+ÖRNEK SCHEDULE KAYDI:
+---------------------
+Id: 1
+CourseId: 1 (BÝL101)
+Semester: 1
+SectionCode: A
+DayOfWeek: Monday (1)
+StartTime: 08:00:00
+EndTime: 09:00:00
+DurationMinutes: 60
+RoomNumber: A100
+InstructorName: Prof. Dr. Ahmet Yýlmaz
+IsTheory: True
+SessionNumber: 1
+MaxCapacity: 50
+
+ZAMAN DÝLÝMLERÝ (Günlük 8 ders saati):
+--------------------------------------
+08:00-09:00
+09:00-10:00
+10:00-11:00
+11:00-12:00
+13:00-14:00  (12:00-13:00 öðle arasý)
+14:00-15:00
+15:00-16:00
+16:00-17:00
+
+================================================================================
+BACKEND CONTROLLER BÝLGÝLERÝ
+================================================================================
+
+Controller: StudentCoursesController
+Route: /api/student-courses
+Method: GetMySchedule()
+Endpoint: GET /api/student-courses/my-schedule
+
+AUTHORIZATION:
+--------------
+- [Authorize] attribute ile korumalý
+- Her rolden kullanýcý çaðýrabilir (Student, Advisor, Admin)
+- Her kullanýcý sadece kendi programýný görür
+
+QUERY PARAMETERS:
+-----------------
+- semester (int?, optional): Yarýyýl filtresi
+
+RESPONSE OLUÞTURMe MEKANÝZMASI:
+-------------------------------
+1. StudentCourseSections tablosundan kayýtlarý çek
+2. Her kayýt için CourseSchedules'dan oturumlarý çek
+3. courses[] array'ini oluþtur (ders bazlý)
+4. weeklySchedule{} objesini oluþtur (gün bazlý)
+5. Ýstatistikleri hesapla (totalCredits, totalECTS)
+6. JSON response döndür
+
+VERÝ AKIÞI:
+-----------
+StudentCourseSections (öðrenci-ders iliþkisi)
+    ? Include(Course)
+Courses (ders bilgileri)
+    ? Join
+CourseSchedules (gün-saat bilgileri)
+    ? Group by dayName
+weeklySchedule (günlere göre program)
+
+================================================================================
+FRONTEND-BACKEND ENTEGRASYON ADIMLARÝ
+================================================================================
+
+ADIM 1: API Service Oluþturma
+------------------------------
+courseService.js dosyasýna getMySchedule metodunu ekleyin
+
+ADIM 2: React Component'te Kullanma
+------------------------------------
+useState ve useEffect ile veri çekin
+
+ADIM 3: UI Render
+-----------------
+weeklySchedule ile tablo veya courses ile liste gösterin
+
+ADIM 4: Hata Yönetimi
+----------------------
+try-catch ile hatalarý yakalayýn ve kullanýcýya gösterin
+
+ADIM 5: Test
+------------
+Swagger, Postman veya Browser Console ile test edin
+
+================================================================================
+SÜRÜM BÝLGÝLERÝ
+================================================================================
+
+API Version: 1.0
+.NET Version: 8.0
+Backend Framework: ASP.NET Core Web API
+Database: SQL Server (LocalDB)
+Frontend (Önerilen): React 18+
+State Management: useState/useEffect
+HTTP Client: Axios
+
+Son Güncelleme: 2025-01-09
+Güncelleme: Tam saat formatýna geçiþ (60 dakikalýk dersler)
+
+================================================================================
+DESTEK VE SORUN GÝDERME
+================================================================================
+
+SORUN: Programda ders görünmüyor
+ÇÖZÜM: 
+  1. Öðrenci derse kayýtlý mý? (StudentCourseSections tablosunu kontrol et)
+  2. Backend çalýþýyor mu? (https://localhost:7175/swagger)
+  3. Token geçerli mi? (/api/auth/validate ile kontrol et)
+
+SORUN: "Course schedule not found" hatasý
+ÇÖZÜM:
+  1. CourseSchedules tablosunda ilgili yarýyýl için veri var mý?
+  2. Admin schedule generate etmiþ mi?
+  3. Semester parametresi doðru mu?
+
+SORUN: weeklySchedule boþ geliyor
+ÇÖZÜM:
+  1. courses[] array'ini kontrol edin
+  2. sessions[] boþ mu?
+  3. Backend log'larýný inceleyin
+
+ÝLETÝÞÝM:
+---------
+Repository: https://github.com/4RD4024N/AdvisorySystem.Api
+Issues: GitHub Issues kýsmýndan bildirebilirsiniz
+
+================================================================================
+DOSYA SONU
+================================================================================

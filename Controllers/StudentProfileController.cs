@@ -31,6 +31,7 @@ public class StudentProfileController : ControllerBase
 
     // Get my profile
     [HttpGet("me")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> GetMyProfile()
     {
         try
@@ -69,7 +70,7 @@ if (profile == null)
 
     // Create or update profile
     [HttpPost]
-    [Authorize(Roles = "Student,Admin")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> CreateOrUpdateProfile([FromBody] StudentProfileDto dto)
     {
         try
@@ -124,7 +125,7 @@ profile.Id,
 
     // Get profile by student ID (Admin/Advisor)
     [HttpGet("{studentId}")]
- [Authorize(Roles = "Admin,Advisor")]
+    [Authorize(Roles = "Advisor")]
     public async Task<IActionResult> GetProfileByStudentId(string studentId)
     {
         try
@@ -163,6 +164,7 @@ if (profile == null)
 
   // Check if student meets prerequisites
     [HttpGet("check-prerequisites")]
+    [Authorize(Roles = "Student")]
     public async Task<IActionResult> CheckPrerequisites()
     {
         try
