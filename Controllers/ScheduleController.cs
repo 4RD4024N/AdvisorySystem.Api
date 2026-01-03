@@ -75,40 +75,77 @@ public class ScheduleController : ControllerBase
       }
     }
 
-    [HttpGet("available/{semester}")]
-    public async Task<IActionResult> GetAvailableCourses(int semester)
-    {
+    [HttpGet("available")]
+    public async Task<IActionResult> GetAvailableCourses()
+ {
         try
-{
-   var schedules = await _db.CourseSchedules.Include(cs => cs.Course).ThenInclude(c => c.Category)
-     .Where(cs => cs.Semester == semester).Select(cs => new
-             {
-          scheduleId = cs.Id,
-        courseId = cs.CourseId,
-   courseCode = cs.Course.CourseCode,
-      courseName = cs.Course.CourseName,
-           description = cs.Course.Description,
-      category = cs.Course.Category.Name,
-      sectionCode = cs.SectionCode,
-     credits = cs.Course.Credits,
-       ects = cs.Course.ECTS,
-       dayOfWeek = cs.DayOfWeek.ToString(),
-         startTime = cs.StartTime.ToString(@"hh\:mm"),
-   endTime = cs.EndTime.ToString(@"hh\:mm"),
-   roomNumber = cs.RoomNumber,
-         instructorName = cs.InstructorName,
-            maxCapacity = cs.MaxCapacity,
-            enrolledCount = _db.StudentCourseSections.Count(scs => scs.CourseId == cs.CourseId && scs.SectionCode == cs.SectionCode && scs.Semester == semester),
-           availableSeats = cs.MaxCapacity - _db.StudentCourseSections.Count(scs => scs.CourseId == cs.CourseId && scs.SectionCode == cs.SectionCode && scs.Semester == semester),
-     isFull = _db.StudentCourseSections.Count(scs => scs.CourseId == cs.CourseId && scs.SectionCode == cs.SectionCode && scs.Semester == semester) >= cs.MaxCapacity
-     }).OrderBy(cs => cs.courseCode).ToListAsync();
+        {
+         var schedules = await _db.CourseSchedules
+        .Include(cs => cs.Course)
+             .ThenInclude(c => c.Category)
+      .ToListAsync();
 
-            return Ok(new { semester, totalCourses = schedules.Count, availableCourses = schedules.Count(s => !s.isFull), fullCourses = schedules.Count(s => s.isFull), courses = schedules });
+            // Dersleri grupla (courseId + sectionCode bazýnda - semester yok)
+        var groupedCourses = schedules
+   .GroupBy(s => new { s.CourseId, s.SectionCode })
+          .Select(g =>
+          {
+         var first = g.First();
+                  var enrolledCount = _db.StudentCourseSections
+       .Count(scs => scs.CourseId == first.CourseId && scs.SectionCode == first.SectionCode);
+
+    return new
+ {
+      courseId = first.CourseId,
+        courseCode = first.Course.CourseCode,
+         courseName = first.Course.CourseName,
+     description = first.Course.Description,
+     category = first.Course.Category.Name,
+         semester = first.Course.Semester, // Dersin ait olduðu dönem (Course tablosundan)
+       sectionCode = first.SectionCode,
+    credits = first.Course.Credits,
+        ects = first.Course.ECTS,
+           theoryHours = first.Course.TheoryHours,
+  practiceHours = first.Course.PracticeHours,
+       isElective = first.Course.IsElective,
+instructor = first.InstructorName,
+                  maxCapacity = first.MaxCapacity,
+     enrolledCount,
+               availableSeats = first.MaxCapacity - enrolledCount,
+        isFull = enrolledCount >= first.MaxCapacity,
+     schedule = g.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).Select(s => new
+   {
+            scheduleId = s.Id,
+  dayOfWeek = s.DayOfWeek.ToString(),
+   startTime = s.StartTime.ToString(@"hh\:mm"),
+  endTime = s.EndTime.ToString(@"hh\:mm"),
+                roomNumber = s.RoomNumber,
+          sessionType = s.IsTheory ? "Teori" : "Uygulama"
+      }).ToList()
+  };
+        })
+      .OrderBy(c => c.semester)
+       .ThenBy(c => c.courseCode)
+        .ThenBy(c => c.sectionCode)
+           .ToList();
+
+      var requiredCourses = groupedCourses.Where(c => !c.isElective).ToList();
+            var electiveCourses = groupedCourses.Where(c => c.isElective).ToList();
+
+      return Ok(new
+       {
+           totalCourses = groupedCourses.Count,
+  requiredCount = requiredCourses.Count,
+       electiveCount = electiveCourses.Count,
+        availableCourses = groupedCourses.Count(c => !c.isFull),
+       fullCourses = groupedCourses.Count(c => c.isFull),
+        courses = groupedCourses
+         });
         }
-   catch (Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get available courses");
-         return StatusCode(500, new { error = "Failed to retrieve available courses", details = ex.Message });
+       return StatusCode(500, new { error = "Failed to retrieve available courses", details = ex.Message });
         }
     }
 

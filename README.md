@@ -1,264 +1,220 @@
-﻿# Advisory System API
+﻿# Danışmanlık Sistemi - Proje Dokümantasyonu
 
-🎓 Student advisory and document management system built with ASP.NET Core 8.
-
-**Version:** 3.1.1 | **Status:** ✅ Production Ready | **Last Updated:** 2025-01-06
-
----
-
-## ⚠️ ÖNEMLİ: SİSTEM MİMARİSİ
-
-**Advisor Atama Sistemi:**
-- ❌ Öğrenciler advisor'a **istek gönderemez**
-- ❌ Öğrenciler advisor **seçemez**  
-- ❌ **Request/approval mekanizması YOK**
-- ✅ **Sadece Admin** öğrencilere advisor atar
-- ✅ Atama anında otomatik bildirimler gönderilir
-- ✅ Öğrenciler atanan advisor'ı görür
-- ✅ Advisor'lar kendilerine atanan öğrencileri yönetir
+**Proje Adı:** AdvisorySystem.Api  
+**Teknoloji:** .NET 8, Entity Framework Core, SQL Server  
+**Son Güncelleme:** Ocak 2025
 
 ---
 
-## 🚀 Quick Start
+## İçindekiler
+
+1. [Proje Hakkında](#proje-hakkında)
+2. [Kurulum](#kurulum)
+3. [API Kullanımı](#api-kullanımı)
+4. [Veritabanı](#veritabanı)
+5. [Roller ve Yetkiler](#roller-ve-yetkiler)
+6. [Test](#test)
+
+---
+
+## Proje Hakkında
+
+Bu sistem üniversite öğrencileri ile danışmanları arasındaki iletişimi yönetmek için geliştirilmiştir. 
+
+**Temel Özellikler:**
+- Öğrenci ders kayıt sistemi
+- Çakışma kontrolü ile otomatik ders programı
+- Döküman yönetimi
+- Bildirim sistemi
+- Danışman-öğrenci eşleştirmesi
+
+---
+
+## Kurulum
+
+### Gereksinimler
+- .NET 8 SDK
+- SQL Server (LocalDB yeterli)
+- Visual Studio 2022 veya VS Code
+
+### Adımlar
 
 ```bash
-# Clone repository
-git clone https://github.com/4RD4024N/AdvisorySystem.Api
+# Projeyi klonla
+git clone https://github.com/4RD4024N/AdvisorySystem.Api.git
 cd AdvisorySystem.Api
 
-# Restore packages
+# Paketleri yükle
 dotnet restore
 
-# Create database
+# Veritabanını oluştur
 dotnet ef database update
 
-# Run application
+# Çalıştır
 dotnet run
-
-# Access Swagger UI
-https://localhost:7175/swagger
 ```
 
-**📖 For complete documentation:** See [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+**API Adresi:** `https://localhost:7175`
 
 ---
 
-## ✨ Key Features
+## API Kullanımı
 
-### 🔐 Authentication & Authorization
-- JWT-based authentication (24-hour tokens)
-- Role-based access control (Admin, Advisor, Student)
-- **v3.1:** Restricted advisor permissions - own students only
+### Giriş Yapma
 
-### 📄 Document Management
-- Create and manage documents (students)
-- Version control with file uploads (PDF, DOCX, PPTX)
-- Download and preview documents
-- Search and filter capabilities
-
-### 👨‍🏫 Advisor System (v3.1)
-- **Admin-Controlled Assignment:**
-  - ✅ Admin assigns advisors to students
-  - ✅ Admin can change or remove advisors
-  - ✅ Auto-notifications on assignment
-  - ❌ Students cannot request or choose advisors
-- **Advisor Capabilities:**
-- View and manage assigned students only
-  - View their documents
-  - Comment and rate documents (v3.1.1)
-  - Send notifications
-  - Create submissions with notes
-- **Student View:**
-  - See assigned advisor
-  - Cannot request advisor change
-
-### 📅 Submissions (Deadlines)
-- Create deadlines **by email or ID** (v3.1.1)
-- Add notes to submissions
-- Track submission status
-- Automatic deadline notifications
-
-### 💬 Comments & Feedback
-- Comment on document versions
-- Delete own comments
-- View comment history
-
-### 📊 Statistics & Reports
-- Student summary statistics
-- Advisor summary statistics
-- Admin overview dashboard
-
-### 🔔 Notifications
-- Automatic notifications (assignments, deadlines)
-- Manual notifications (single/bulk)
-- Mark as read/unread
-- Notification history
-
----
-
-## 🛠️ Tech Stack
-
-- **.NET 8.0** - Latest LTS framework
-- **ASP.NET Core Web API** - RESTful API
-- **Entity Framework Core 8.0** - ORM with Code-First
-- **SQL Server** - Database (LocalDB/Azure SQL)
-- **JWT Authentication** - Secure token-based auth
-- **Swagger/OpenAPI** - API documentation
-
-**For detailed tech info:** See [TECHNOLOGY_STACK.md](TECHNOLOGY_STACK.md)
-
----
-
-## 📋 API Endpoints (Summary)
-
-### Authentication
-```
+```http
 POST /api/auth/login
-POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "student1@local",
+  "password": "Student123!"
+}
 ```
 
-### Documents
-```
-GET    /api/documents
-POST   /api/documents
-POST   /api/documents/{id}/versions
-GET    /api/documents/download/{versionId}
-GET    /api/documents/preview/{versionId}
-```
-
-### Submissions
-```
-GET    /api/submissions/my
-POST   /api/submissions
+**Cevap:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1...",
+  "refreshToken": "abc123...",
+  "email": "student1@local",
+  "role": "Student"
+}
 ```
 
-### Students (Admin/Advisor)
-```
-GET    /api/students
-GET    /api/students/{id}
-POST   /api/students/{id}/send-notification
+### Derse Kayıt Olma
+
+```http
+POST /api/section-enrollment/enroll
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "courseId": 5,
+  "sectionCode": "A"
+}
 ```
 
-### Advisors
-```
-POST   /api/advisors/assign-to-student  (Admin)
-GET    /api/advisors/my-advisor    (Student)
-GET    /api/students/my-students     (Advisor)
+### Ders Programımı Görme
+
+```http
+GET /api/student-courses/my-schedule
+Authorization: Bearer {token}
 ```
 
-**📖 Complete API Reference:** [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+### Tüm Dersleri Listeleme
+
+```http
+GET /api/schedule/available
+Authorization: Bearer {token}
+```
 
 ---
 
-## 🔑 Default Users
+## Veritabanı
 
-| Email | Password | Role |
-|-------|----------|------|
+### Ana Tablolar
+
+| Tablo | Açıklama |
+|-------|----------|
+| AspNetUsers | Kullanıcılar (öğrenci, danışman, admin) |
+| Courses | Dersler |
+| CourseSchedules | Ders saatleri ve şubeler |
+| StudentCourseSections | Öğrenci ders kayıtları |
+| Documents | Yüklenen dökümanlar |
+| Notifications | Bildirimler |
+
+### Örnek Sorgular
+
+```sql
+-- Öğrencinin kayıtlı derslerini gör
+SELECT c.CourseCode, c.CourseName, scs.SectionCode
+FROM StudentCourseSections scs
+JOIN Courses c ON scs.CourseId = c.Id
+WHERE scs.StudentId = 'öğrenci-id';
+
+-- Ders programını gör
+SELECT c.CourseCode, cs.DayOfWeek, cs.StartTime, cs.EndTime
+FROM CourseSchedules cs
+JOIN Courses c ON cs.CourseId = c.Id
+WHERE cs.Semester = 1;
+```
+
+---
+
+## Roller ve Yetkiler
+
+### Öğrenci (Student)
+- Kendi profilini görür/düzenler
+- Derse kayıt olur/çıkar
+- Ders programını görür
+- Döküman yükler
+
+### Danışman (Advisor)
+- Kendi öğrencilerinin profillerini görür
+- Öğrencilerine submission atar
+- Rating verir
+- Yorum yapar
+
+### Admin
+- Kullanıcı yönetimi
+- Danışman ataması
+- Ders/schedule yönetimi
+- Toplu bildirim gönderme
+
+**Not:** Admin, öğrenci işlemleri yapamaz (profil görme, derse kayıt vs.)
+
+---
+
+## Test
+
+### Test Projesini Çalıştırma
+
+```bash
+cd AdvisorySystem.Tests
+dotnet test
+```
+
+### Test Kategorileri
+
+| Kategori | Test Sayısı | Açıklama |
+|----------|-------------|----------|
+| Enrollment | 12 | Ders kayıt testleri |
+| Conflict | 8 | Çakışma kontrolü |
+| Capacity | 4 | Kapasite kontrolü |
+| Scheduler | 5 | Schedule oluşturma |
+
+**Toplam:** 29 test
+
+---
+
+## Varsayılan Kullanıcılar
+
+| Email | Şifre | Rol |
+|-------|-------|-----|
 | admin@local | Admin123! | Admin |
 | advisor1@local | Advisor123! | Advisor |
 | student1@local | Student123! | Student |
 
 ---
 
-## ⚙️ Configuration
+## Sorun Giderme
 
-**Database:** SQL Server LocalDB (Development)
-```json
-"ConnectionStrings": {
-  "Default": "Server=(localdb)\\MSSQLLocalDB;Database=AdvisorySystemDB;..."
-}
+### CORS Hatası
+`Program.cs` dosyasında frontend URL'ini ekle:
+```csharp
+policy.WithOrigins("http://localhost:5173")
 ```
 
-**JWT Settings:**
-```json
-"Jwt": {
-  "Key": "Your-Secret-Key-32-Characters-Long",
-  "ExpiresMinutes": 1440
-}
-```
+### 401 Unauthorized
+- Token süresi dolmuş olabilir
+- Refresh token kullan veya tekrar giriş yap
 
-**File Storage:**
-```json
-"Storage": {
-  "Root": "wwwroot/uploads",
-  "MaxFileSize": 104857600
-}
-```
+### 403 Forbidden
+- Yetkisiz işlem yapıyorsun
+- Rol kontrolünü kontrol et
 
 ---
 
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick start guide |
-| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | Complete API reference |
-| [ERROR_HANDLING_GUIDE.md](ERROR_HANDLING_GUIDE.md) | Troubleshooting guide |
-| [ADVISOR_AUTHORIZATION_v3.1.md](ADVISOR_AUTHORIZATION_v3.1.md) | Authorization details |
-
----
-
-## 🔄 Changelog
-
-### v3.1.1 (2025-01-06) - Latest
-- ✅ **Comment 403 Fix** - Advisors can now comment on student documents
-- ✅ **Rating 403 Fix** - Advisors can now rate student documents (1-100 score)
-- ✅ Submission creation with **email** support
-- ✅ Notes field in submissions
-- ✅ **Documentation cleanup** - 85% reduction (40+ files → 9 files)
-- ✅ **Code cleanup** - Removed 100+ unnecessary comments
-- ✅ Improved error messages and logging
-- ✅ All authorization fixed to use v3.1 model (`AppUser.AdvisorId`)
-
-### v3.1.0 (2025-01-05)
-- ✅ **Restricted advisor permissions**
-- ✅ Advisors can only access own students
-- ✅ Admin-only endpoints added
-
-### v3.0.0 (2024-12-20)
-- ✅ Simplified advisor assignment system
-- ✅ Direct student-advisor relationship
-- ✅ Automatic notifications
-
----
-
-## ☁️ Azure Deployment
-
-**Recommended Services:**
-- **Azure App Service** - Host Web API
-- **Azure SQL Database** - Production database
-- **Azure Blob Storage** - File storage
-- **Application Insights** - Monitoring
-
-**Estimated Cost:** ~$30-35/month (Basic tier)
-
-**For deployment guide:** See Azure section in full README or contact maintainer.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
----
-
-## 📞 Contact
-
-- **Repository:** https://github.com/4RD4024N/AdvisorySystem.Api
-- **Issues:** [GitHub Issues](https://github.com/4RD4024N/AdvisorySystem.Api/issues)
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) file for details.
-
----
-
-**🎯 Project Status:** Active Development  
-**📅 Last Updated:** 2025-01-06  
-**🔖 Current Version:** 3.1.1
+**Hazırlayan:** Proje Ekibi  
+**Tarih:** Ocak 2025

@@ -45,61 +45,63 @@ new TimeSpan(9, 0, 0),   // 09:00
     public async Task<List<CourseSchedule>> GenerateScheduleForSemesterAsync(int semester)
     {
    try
-        {
-   // Clear existing schedules for this semester
- var existingSchedules = await _db.CourseSchedules
- .Where(cs => cs.Semester == semester)
-  .ToListAsync();
-          _db.CourseSchedules.RemoveRange(existingSchedules);
-  await _db.SaveChangesAsync();
-
-            // Get all courses for this semester
-         var courses = await _db.Courses
-     .Include(c => c.Category)
-   .Where(c => c.Semester == semester && !c.IsElective)
-   .OrderByDescending(c => c.TotalWeeklyHours)
-   .ToListAsync();
-
-  var schedules = new List<CourseSchedule>();
-   
- // Create multiple sections (A, B, C) for each course
-   var sections = new[] { "A", "B", "C" };
-     
-            foreach (var sectionCode in sections)
-   {
-    var usedSlots = new Dictionary<string, bool>();
-   
-           foreach (var course in courses)
-        {
-    var courseSchedules = await AssignCourseToSlotsAsync(
-       course,
-semester,
-      sectionCode,
-  usedSlots);
-
-      if (courseSchedules.Any())
       {
-             schedules.AddRange(courseSchedules);
-           _db.CourseSchedules.AddRange(courseSchedules);
-         }
- else
+        // Clear existing schedules for this semester
+         var existingSchedules = await _db.CourseSchedules
+  .Where(cs => cs.Semester == semester)
+ .ToListAsync();
+            _db.CourseSchedules.RemoveRange(existingSchedules);
+          await _db.SaveChangesAsync();
+
+   // Get all courses for this semester - client-side ordering to support computed properties
+      var courses = await _db.Courses
+       .Include(c => c.Category)
+  .Where(c => c.Semester == semester && !c.IsElective)
+        .ToListAsync();
+
+            // Sort in memory (client-side) to avoid EF Core translation issues with computed property
+            courses = courses.OrderByDescending(c => c.TotalWeeklyHours).ToList();
+
+      var schedules = new List<CourseSchedule>();
+
+ // Create multiple sections (A, B, C) for each course
+     var sections = new[] { "A", "B", "C" };
+
+      foreach (var sectionCode in sections)
     {
-    _logger.LogWarning($"Could not schedule course: {course.CourseCode} - Section {sectionCode}");
-        }
-  }
-  }
+     var usedSlots = new Dictionary<string, bool>();
 
-        await _db.SaveChangesAsync();
+     foreach (var course in courses)
+  {
+  var courseSchedules = await AssignCourseToSlotsAsync(
+     course,
+       semester,
+  sectionCode,
+    usedSlots);
 
-            _logger.LogInformation($"Generated {schedules.Count} schedule entries for semester {semester}");
-            return schedules;
-        }
-     catch (Exception ex)
-        {
-        _logger.LogError(ex, "Failed to generate schedule");
-   throw;
+          if (courseSchedules.Any())
+   {
+        schedules.AddRange(courseSchedules);
+ _db.CourseSchedules.AddRange(courseSchedules);
+    }
+      else
+    {
+      _logger.LogWarning($"Could not schedule course: {course.CourseCode} - Section {sectionCode}");
    }
     }
+     }
+
+  await _db.SaveChangesAsync();
+
+ _logger.LogInformation($"Generated {schedules.Count} schedule entries for semester {semester}");
+    return schedules;
+ }
+        catch (Exception ex)
+        {
+     _logger.LogError(ex, "Failed to generate schedule");
+        throw;
+  }
+  }
 
     private async Task<List<CourseSchedule>> AssignCourseToSlotsAsync(
 Course course,
@@ -252,35 +254,63 @@ if (!_timeSlots.Contains(slotTime))
 
   public async Task<List<ScheduleConflict>> DetectConflictsAsync(int semester)
     {
+  _logger.LogInformation($"Detecting conflicts for semester {semester}");
+
+        // Önce bu semester için mevcut conflict kayýtlarýný temizle
+        var existingConflicts = await _db.ScheduleConflicts
+            .Where(sc => _db.CourseSchedules.Any(cs => cs.Id == sc.Schedule1Id && cs.Semester == semester))
+            .ToListAsync();
+  
+ if (existingConflicts.Any())
+    {
+            _db.ScheduleConflicts.RemoveRange(existingConflicts);
+         await _db.SaveChangesAsync();
+_logger.LogInformation($"Cleared {existingConflicts.Count} existing conflicts for semester {semester}");
+        }
+
         var schedules = await _db.CourseSchedules
-   .Include(cs => cs.Course)
-    .Where(cs => cs.Semester == semester)
-.ToListAsync();
+            .Include(cs => cs.Course)
+     .Where(cs => cs.Semester == semester)
+        .ToListAsync();
 
         var conflicts = new List<ScheduleConflict>();
 
-      for (int i = 0; i < schedules.Count; i++)
+        for (int i = 0; i < schedules.Count; i++)
         {
-            for (int j = i + 1; j < schedules.Count; j++)
-     {
-  var s1 = schedules[i];
-  var s2 = schedules[j];
+ for (int j = i + 1; j < schedules.Count; j++)
+            {
+    var s1 = schedules[i];
+    var s2 = schedules[j];
 
-       if (s1.DayOfWeek == s2.DayOfWeek &&
-    s1.StartTime < s2.EndTime &&
-         s2.StartTime < s1.EndTime)
-   {
-               conflicts.Add(new ScheduleConflict
-         {
-       Schedule1Id = s1.Id,
-              Schedule2Id = s2.Id,
-    ConflictType = "TimeOverlap",
-            Description = $"{s1.Course.CourseCode} and {s2.Course.CourseCode} overlap on {s1.DayOfWeek}",
-   DetectedAt = DateTime.UtcNow
-            });
+                // Ayný gün ve zaman çakýþmasý kontrolü
+                if (s1.DayOfWeek == s2.DayOfWeek &&
+           s1.StartTime < s2.EndTime &&
+        s2.StartTime < s1.EndTime)
+             {
+   var conflict = new ScheduleConflict
+            {
+        Schedule1Id = s1.Id,
+             Schedule2Id = s2.Id,
+  ConflictType = "TimeOverlap",
+        Description = $"{s1.Course.CourseCode} ({s1.SectionCode}) and {s2.Course.CourseCode} ({s2.SectionCode}) overlap on {s1.DayOfWeek} at {s1.StartTime:hh\\:mm}-{s1.EndTime:hh\\:mm}",
+  DetectedAt = DateTime.UtcNow
+          };
+   conflicts.Add(conflict);
+           }
+          }
         }
-   }
-     }
+
+        // ? Çakýþmalarý veritabanýna kaydet
+        if (conflicts.Any())
+      {
+            _db.ScheduleConflicts.AddRange(conflicts);
+            await _db.SaveChangesAsync();
+            _logger.LogInformation($"Saved {conflicts.Count} conflicts to database for semester {semester}");
+        }
+        else
+   {
+            _logger.LogInformation($"No conflicts detected for semester {semester}");
+        }
 
         return conflicts;
     }

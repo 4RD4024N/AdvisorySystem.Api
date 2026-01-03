@@ -225,12 +225,8 @@ namespace AdvisorySystem.Api.Data
         public int CourseId { get; set; }
         public Course Course { get; set; } = default!;
         public string SectionCode { get; set; } = "A";
-        public int Semester { get; set; }
         public DateTime EnrolledAt { get; set; } = DateTime.UtcNow;
         public bool IsCompleted { get; set; } = false;
-        public double? Grade { get; set; }
-        public string? LetterGrade { get; set; }
-        public DateTime? CompletionDate { get; set; }
     }
 
     public class ScheduleConflict
