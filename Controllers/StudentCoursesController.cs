@@ -99,65 +99,169 @@ totalCredits,
     public async Task<IActionResult> GetStudentProgram(string studentId)
     {
         try
-        {
-   var currentUserId = GetUserId();
-
-    var student = await _userManager.FindByIdAsync(studentId);
-         if (student == null)
-         return NotFound(new { error = "Student not found" });
-
-    if (student.AdvisorId != currentUserId)
-        return Forbid();
-
-    var enrolledCourses = await _db.StudentCourses
-  .Where(sc => sc.StudentId == studentId)
-     .Include(sc => sc.Course)
-    .ThenInclude(c => c.Category)
-  .OrderBy(sc => sc.Course.Semester)
-   .ThenBy(sc => sc.Course.CourseCode)
-      .Select(sc => new
-   {
-        sc.Id,
-        semester = sc.Course.Semester,
-      courseId = sc.Course.Id,
-     courseCode = sc.Course.CourseCode,
-       courseName = sc.Course.CourseName,
-        theoryHours = sc.Course.TheoryHours,
-    practiceHours = sc.Course.PracticeHours,
-      credits = sc.Course.Credits,
-     ects = sc.Course.ECTS,
-  isElective = sc.Course.IsElective,
-    category = sc.Course.Category.Name,
-       sc.IsCompleted,
-      sc.Grade,
-   sc.LetterGrade,
-    sc.CompletionDate,
-    sc.EnrolledAt
-     })
-  .ToListAsync();
-
-var totalCredits = enrolledCourses.Where(c => c.IsCompleted).Sum(c => c.credits);
-      var totalECTS = enrolledCourses.Where(c => c.IsCompleted).Sum(c => c.ects);
-var gpa = enrolledCourses.Where(c => c.Grade.HasValue).DefaultIfEmpty().Average(c => c?.Grade);
-
-return Ok(new
     {
-      studentId,
-        studentName = student.UserName,
-      studentEmail = student.Email,
-      totalCourses = enrolledCourses.Count,
-  completedCourses = enrolledCourses.Count(c => c.IsCompleted),
-   totalCredits,
-      totalECTS,
-     gpa = gpa.HasValue ? Math.Round(gpa.Value, 2) : (double?)null,
-courses = enrolledCourses
+ var currentUserId = GetUserId();
+
+         var student = await _userManager.FindByIdAsync(studentId);
+   if (student == null)
+                return NotFound(new { error = "Student not found" });
+
+            if (student.AdvisorId != currentUserId)
+          return Forbid();
+
+     // Öðrencinin kayýtlý derslerini ve section'larýný al
+            var enrolledSections = await _db.StudentCourseSections
+    .Where(scs => scs.StudentId == studentId && !scs.IsCompleted)
+   .Include(scs => scs.Course)
+          .ThenInclude(c => c.Category)
+      .ToListAsync();
+
+         var scheduleDetails = new List<object>();
+
+            // Her ders için schedule bilgilerini al
+     foreach (var section in enrolledSections)
+            {
+   var schedules = await _db.CourseSchedules
+        .Where(cs => cs.CourseId == section.CourseId && cs.SectionCode == section.SectionCode)
+   .OrderBy(cs => cs.DayOfWeek)
+      .ThenBy(cs => cs.StartTime)
+                .ToListAsync();
+
+ if (schedules.Any())
+      {
+                 scheduleDetails.Add(new
+   {
+    courseId = section.CourseId,
+           courseCode = section.Course.CourseCode,
+    courseName = section.Course.CourseName,
+            description = section.Course.Description,
+      credits = section.Course.Credits,
+          ects = section.Course.ECTS,
+         category = section.Course.Category.Name,
+       sectionCode = section.SectionCode,
+        semester = section.Course.Semester,
+     isCompleted = section.IsCompleted,
+ sessions = schedules.Select(s => new
+         {
+        scheduleId = s.Id,
+         dayOfWeek = s.DayOfWeek.ToString(),
+          dayOfWeekNumber = (int)s.DayOfWeek,
+   dayName = s.DayOfWeek switch
+       {
+          DayOfWeek.Monday => "Pazartesi",
+         DayOfWeek.Tuesday => "Salý",
+      DayOfWeek.Wednesday => "Çarþamba",
+          DayOfWeek.Thursday => "Perþembe",
+      DayOfWeek.Friday => "Cuma",
+      _ => s.DayOfWeek.ToString()
+          },
+        startTime = s.StartTime.ToString(@"hh\:mm"),
+         endTime = s.EndTime.ToString(@"hh\:mm"),
+        timeSlot = $"{s.StartTime:hh\\:mm}-{s.EndTime:hh\\:mm}",
+        roomNumber = s.RoomNumber,
+  instructorName = s.InstructorName,
+   isTheory = s.IsTheory,
+ sessionType = s.IsTheory ? "Teori" : "Uygulama",
+          durationMinutes = (int)(s.EndTime - s.StartTime).TotalMinutes
+         }).ToList()
+        });
+            }
+ }
+
+            // Haftalýk program görünümü
+         var weeklySchedule = new Dictionary<string, List<object>>
+     {
+    { "Pazartesi", new List<object>() },
+      { "Salý", new List<object>() },
+      { "Çarþamba", new List<object>() },
+           { "Perþembe", new List<object>() },
+                { "Cuma", new List<object>() }
+            };
+
+    foreach (var section in enrolledSections)
+   {
+     var schedules = await _db.CourseSchedules
+ .Where(cs => cs.CourseId == section.CourseId && cs.SectionCode == section.SectionCode)
+    .ToListAsync();
+
+       foreach (var schedule in schedules)
+    {
+     var dayName = schedule.DayOfWeek switch
+     {
+     DayOfWeek.Monday => "Pazartesi",
+    DayOfWeek.Tuesday => "Salý",
+        DayOfWeek.Wednesday => "Çarþamba",
+                 DayOfWeek.Thursday => "Perþembe",
+     DayOfWeek.Friday => "Cuma",
+               _ => null
+          };
+
+  if (dayName != null && weeklySchedule.ContainsKey(dayName))
+      {
+       weeklySchedule[dayName].Add(new
+             {
+        courseCode = section.Course.CourseCode,
+           courseName = section.Course.CourseName,
+    sectionCode = section.SectionCode,
+            startTime = schedule.StartTime.ToString(@"hh\:mm"),
+        endTime = schedule.EndTime.ToString(@"hh\:mm"),
+     timeSlot = $"{schedule.StartTime:hh\\:mm}-{schedule.EndTime:hh\\:mm}",
+            roomNumber = schedule.RoomNumber,
+         instructorName = schedule.InstructorName,
+                sessionType = schedule.IsTheory ? "Teori" : "Uygulama"
+       });
+   }
+                }
+     }
+
+            // Günleri saate göre sýrala
+    foreach (var day in weeklySchedule.Keys.ToList())
+ {
+          weeklySchedule[day] = weeklySchedule[day]
+           .OrderBy(x => ((dynamic)x).startTime)
+            .ToList();
+   }
+
+        // Tamamlanan dersleri de al (özet için)
+      var completedCourses = await _db.StudentCourses
+         .Where(sc => sc.StudentId == studentId && sc.IsCompleted)
+      .Include(sc => sc.Course)
+.ToListAsync();
+
+            var totalCredits = enrolledSections.Sum(s => s.Course.Credits);
+      var totalECTS = enrolledSections.Sum(s => s.Course.ECTS);
+    var totalCompletedCredits = completedCourses.Sum(c => c.Course.Credits);
+
+        // Student profile bilgisi
+            var studentProfile = await _db.StudentProfiles
+      .FirstOrDefaultAsync(sp => sp.UserId == studentId);
+
+       return Ok(new
+          {
+        student = new
+ {
+    studentId,
+         userName = student.UserName,
+    email = student.Email,
+   fullName = studentProfile?.FullName ?? student.UserName,
+         studentNumber = studentProfile?.StudentNumber,
+     department = studentProfile?.Department,
+   gpa = studentProfile?.GPA
+    },
+       totalCourses = enrolledSections.Count,
+   completedCourses = completedCourses.Count,
+                totalCredits,
+        totalECTS,
+          totalCompletedCredits,
+                courses = scheduleDetails,
+       weeklySchedule
             });
-}
-   catch (Exception ex)
+      }
+        catch (Exception ex)
         {
-       _logger.LogError(ex, "Failed to get student program");
-       return StatusCode(500, new { error = "Failed to retrieve program", details = ex.Message });
-  }
+      _logger.LogError(ex, "Failed to get student program");
+            return StatusCode(500, new { error = "Failed to retrieve program", details = ex.Message });
+        }
     }
 
     // Derse kayýt ol
