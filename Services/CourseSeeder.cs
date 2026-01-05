@@ -8,13 +8,13 @@ public static class CourseSeeder
 {
     public static async Task SeedCoursesAsync(IServiceProvider sp)
     {
-   using var scope = sp.CreateScope();
+        using var scope = sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-     if (await db.Courses.AnyAsync())
+        if (await db.Courses.AnyAsync())
         {
- return;
-      }
+            return;
+        }
 
         var categories = new List<CourseCategory>
       {
@@ -34,7 +34,7 @@ public static class CourseSeeder
         };
 
         await db.CourseCategories.AddRangeAsync(categories);
-     await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         var courses = new List<Course>
         {
@@ -182,67 +182,67 @@ new() { CourseCode = "BÝL456", CourseName = "ÝMGE ÝÞLEME", TheoryHours = 3, Prac
           new() { CourseCode = "GNLÝ310", CourseName = "GÖNÜLLÜLÜK ÇALIÞMALARI", TheoryHours = 1, PracticeHours = 2, Credits = 2, ECTS = 4, CategoryId = 13, IsElective = true, Description = "Toplumsal sorumluluk projeleri ve gönüllülük faaliyetlerinin uygulamalý gerçekleþtirildiði derstir." }
         };
 
-      await db.Courses.AddRangeAsync(courses);
+        await db.Courses.AddRangeAsync(courses);
         await db.SaveChangesAsync();
 
-      await AddPrerequisites(db);
+        await AddPrerequisites(db);
     }
 
     private static async Task AddPrerequisites(AppDbContext db)
     {
-    var bil122 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL122");
+        var bil122 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL122");
         var bil101 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL101");
-        
+
         var mat152 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT152");
         var mat151 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT151");
-  
-   var bil265 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL265");
-        
+
+        var bil265 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL265");
+
         var eng200 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "ENG200");
         var eng199 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "ENG199");
-        
+
         var bil210 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL210");
         var fiz110 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "FÝZ110");
-        
-var bil218 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL218");
+
+        var bil218 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL218");
         var bil275 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL275");
-    
-var bil240 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL240");
-        
+
+        var bil240 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL240");
+
         var mat286 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT286");
-        
+
         var bil367 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL367");
-        
- var mat311 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT311");
-   
+
+        var mat311 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT311");
+
         var bil390 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL390");
-  var bil386 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL386");
-  
+        var bil386 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL386");
+
         var bil498 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL498");
-    var bil300 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL300");
-        
+        var bil300 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL300");
+
         var bil494 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL494");
         var bil493 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL493");
 
- var prerequisites = new List<Prerequisite>();
+        var prerequisites = new List<Prerequisite>();
 
-    if (bil122 != null && bil101 != null)
-     prerequisites.Add(new Prerequisite { CourseId = bil122.Id, PrerequisiteCourseId = bil101.Id });
+        if (bil122 != null && bil101 != null)
+            prerequisites.Add(new Prerequisite { CourseId = bil122.Id, PrerequisiteCourseId = bil101.Id });
 
         if (mat152 != null && mat151 != null)
             prerequisites.Add(new Prerequisite { CourseId = mat152.Id, PrerequisiteCourseId = mat151.Id });
 
-    if (bil265 != null && bil122 != null)
-    prerequisites.Add(new Prerequisite { CourseId = bil265.Id, PrerequisiteCourseId = bil122.Id });
+        if (bil265 != null && bil122 != null)
+            prerequisites.Add(new Prerequisite { CourseId = bil265.Id, PrerequisiteCourseId = bil122.Id });
 
         if (eng200 != null && eng199 != null)
-        prerequisites.Add(new Prerequisite { CourseId = eng200.Id, PrerequisiteCourseId = eng199.Id });
+            prerequisites.Add(new Prerequisite { CourseId = eng200.Id, PrerequisiteCourseId = eng199.Id });
 
         if (bil210 != null && fiz110 != null)
-        prerequisites.Add(new Prerequisite { CourseId = bil210.Id, PrerequisiteCourseId = fiz110.Id });
+            prerequisites.Add(new Prerequisite { CourseId = bil210.Id, PrerequisiteCourseId = fiz110.Id });
 
         if (bil218 != null && bil275 != null)
-      prerequisites.Add(new Prerequisite { CourseId = bil218.Id, PrerequisiteCourseId = bil275.Id });
+            prerequisites.Add(new Prerequisite { CourseId = bil218.Id, PrerequisiteCourseId = bil275.Id });
 
         if (bil240 != null && bil122 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil240.Id, PrerequisiteCourseId = bil122.Id });
@@ -251,24 +251,24 @@ var bil240 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL240")
             prerequisites.Add(new Prerequisite { CourseId = mat286.Id, PrerequisiteCourseId = mat152.Id });
 
         if (bil367 != null && bil265 != null)
-       prerequisites.Add(new Prerequisite { CourseId = bil367.Id, PrerequisiteCourseId = bil265.Id });
+            prerequisites.Add(new Prerequisite { CourseId = bil367.Id, PrerequisiteCourseId = bil265.Id });
 
         if (mat311 != null && mat151 != null)
-     prerequisites.Add(new Prerequisite { CourseId = mat311.Id, PrerequisiteCourseId = mat151.Id });
+            prerequisites.Add(new Prerequisite { CourseId = mat311.Id, PrerequisiteCourseId = mat151.Id });
 
         if (bil390 != null && bil386 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil390.Id, PrerequisiteCourseId = bil386.Id });
 
         if (bil498 != null && bil300 != null)
-          prerequisites.Add(new Prerequisite { CourseId = bil498.Id, PrerequisiteCourseId = bil300.Id });
+            prerequisites.Add(new Prerequisite { CourseId = bil498.Id, PrerequisiteCourseId = bil300.Id });
 
         if (bil494 != null && bil493 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil494.Id, PrerequisiteCourseId = bil493.Id });
 
-     if (prerequisites.Any())
-     {
+        if (prerequisites.Any())
+        {
             await db.Prerequisites.AddRangeAsync(prerequisites);
-       await db.SaveChangesAsync();
+            await db.SaveChangesAsync();
         }
     }
 }

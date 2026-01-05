@@ -38,7 +38,7 @@ namespace AdvisorySystem.Api.Data
                 .HasIndex(c => c.CourseCode)
                 .IsUnique();
 
-            // ✅ Description field için explicit Unicode configuration
+            
             b.Entity<Course>()
                 .Property(c => c.Description)
                 .HasColumnType("nvarchar(MAX)")

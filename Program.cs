@@ -44,9 +44,9 @@ builder.Services.AddCors(o =>
 .WithOrigins(
         "http://localhost:5173", 
     "http://localhost:5174",
- "http://localhost:5175",    // ? EKLENDÝ
+ "http://localhost:5175",    
         "http://localhost:3000",
-        "https://localhost:44375"   // ? EKLENDÝ (HTTPS)
+        "https://localhost:44375"   
         ) 
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -98,7 +98,7 @@ builder.Services.AddAuthentication(o =>
   };
 });
 
-// Storage Service - Choose between Local or Azure based on configuration
+
 var azureStorageConnectionString = builder.Configuration["Azure:StorageConnectionString"];
 if (!string.IsNullOrEmpty(azureStorageConnectionString))
 {
@@ -155,7 +155,7 @@ try
 {
     await IdentitySeeder.SeedAsync(app.Services);
     await CourseSeeder.SeedCoursesAsync(app.Services);
-    await CourseScheduleSeeder.SeedSchedulesAsync(app.Services); // ? YENÝ: Schedule seeding
+    await CourseScheduleSeeder.SeedSchedulesAsync(app.Services); 
 }
 catch (Exception ex)
 {

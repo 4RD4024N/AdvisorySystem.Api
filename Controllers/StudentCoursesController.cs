@@ -36,7 +36,7 @@ public class StudentCoursesController : ControllerBase
       ?? throw new UnauthorizedAccessException("User ID not found");
     }
 
-    // Öðrencinin kendi programýný getir
+    // ï¿½ï¿½rencinin kendi programï¿½nï¿½ getir
     [HttpGet("my-program")]
     [Authorize(Roles = "Student,Advisor")]
     public async Task<IActionResult> GetMyProgram()
@@ -93,7 +93,7 @@ totalCredits,
         }
     }
 
-    // Advisor öðrencisinin programýný görebilir
+   
     [HttpGet("student/{studentId}")]
     [Authorize(Roles = "Advisor")]
     public async Task<IActionResult> GetStudentProgram(string studentId)
@@ -109,7 +109,7 @@ totalCredits,
             if (student.AdvisorId != currentUserId)
           return Forbid();
 
-     // Öðrencinin kayýtlý derslerini ve section'larýný al
+     // ï¿½ï¿½rencinin kayï¿½tlï¿½ derslerini ve section'larï¿½nï¿½ al
             var enrolledSections = await _db.StudentCourseSections
     .Where(scs => scs.StudentId == studentId && !scs.IsCompleted)
    .Include(scs => scs.Course)
@@ -118,7 +118,7 @@ totalCredits,
 
          var scheduleDetails = new List<object>();
 
-            // Her ders için schedule bilgilerini al
+            // Her ders iï¿½in schedule bilgilerini al
      foreach (var section in enrolledSections)
             {
    var schedules = await _db.CourseSchedules
@@ -149,9 +149,9 @@ totalCredits,
    dayName = s.DayOfWeek switch
        {
           DayOfWeek.Monday => "Pazartesi",
-         DayOfWeek.Tuesday => "Salý",
-      DayOfWeek.Wednesday => "Çarþamba",
-          DayOfWeek.Thursday => "Perþembe",
+         DayOfWeek.Tuesday => "Sali",        // Ä± yerine i
+      DayOfWeek.Wednesday => "Carsamba",  // ÅŸ yerine s, Ã§ yerine c
+          DayOfWeek.Thursday => "Persembe",   // ÅŸ yerine s
       DayOfWeek.Friday => "Cuma",
       _ => s.DayOfWeek.ToString()
           },
@@ -168,13 +168,13 @@ totalCredits,
             }
  }
 
-            // Haftalýk program görünümü
+            // Haftalï¿½k program gï¿½rï¿½nï¿½mï¿½
          var weeklySchedule = new Dictionary<string, List<object>>
      {
     { "Pazartesi", new List<object>() },
-      { "Salý", new List<object>() },
-      { "Çarþamba", new List<object>() },
-           { "Perþembe", new List<object>() },
+    { "Sali", new List<object>() },      // SalÄ± â†’ Sali
+    { "Carsamba", new List<object>() },  // Ã‡arÅŸamba â†’ Carsamba
+    { "Persembe", new List<object>() },  // PerÅŸembe â†’ Persembe
                 { "Cuma", new List<object>() }
             };
 
@@ -189,9 +189,9 @@ totalCredits,
      var dayName = schedule.DayOfWeek switch
      {
      DayOfWeek.Monday => "Pazartesi",
-    DayOfWeek.Tuesday => "Salý",
-        DayOfWeek.Wednesday => "Çarþamba",
-                 DayOfWeek.Thursday => "Perþembe",
+    DayOfWeek.Tuesday => "Sali",
+        DayOfWeek.Wednesday => "Carsamba",
+                 DayOfWeek.Thursday => "Persembe",
      DayOfWeek.Friday => "Cuma",
                _ => null
           };
@@ -214,7 +214,7 @@ totalCredits,
                 }
      }
 
-            // Günleri saate göre sýrala
+            // Gï¿½nleri saate gï¿½re sï¿½rala
     foreach (var day in weeklySchedule.Keys.ToList())
  {
           weeklySchedule[day] = weeklySchedule[day]
@@ -222,7 +222,7 @@ totalCredits,
             .ToList();
    }
 
-        // Tamamlanan dersleri de al (özet için)
+        // Tamamlanan dersleri de al (ï¿½zet iï¿½in)
       var completedCourses = await _db.StudentCourses
          .Where(sc => sc.StudentId == studentId && sc.IsCompleted)
       .Include(sc => sc.Course)
@@ -264,7 +264,7 @@ totalCredits,
         }
     }
 
-    // Derse kayýt ol
+    // Derse kayï¿½t ol
     [HttpPost("enroll")]
     [Authorize(Roles = "Student")]
     public async Task<IActionResult> EnrollCourse([FromBody] EnrollCourseDto dto)
@@ -283,7 +283,7 @@ var exists = await _db.StudentCourses
 if (exists)
     return BadRequest(new { error = "Already enrolled in this course" });
 
-            // Schedule var mý kontrol et
+            // Schedule var mï¿½ kontrol et
        var scheduleExists = await _db.CourseSchedules
             .AnyAsync(cs => cs.CourseId == dto.CourseId);
 
@@ -297,7 +297,7 @@ if (exists)
      });
          }
 
-  // En uygun section'ý bul
+  // En uygun section'ï¿½ bul
             var bestSection = await FindBestSectionAsync(userId, dto.CourseId);
 
       if (bestSection == null)
@@ -350,7 +350,7 @@ return Ok(new
         }
     }
 
-    // En uygun section'ý bul
+    // En uygun section'ï¿½ bul
     private async Task<BestSectionResult?> FindBestSectionAsync(string studentId, int courseId)
     {
         _logger.LogInformation($"Finding best section for student {studentId}, course {courseId}");
@@ -367,7 +367,7 @@ return Ok(new
 
         var sections = allSchedules.GroupBy(cs => cs.SectionCode).ToList();
 
-        // Öðrencinin mevcut schedule'larýný al
+        // ï¿½ï¿½rencinin mevcut schedule'larï¿½nï¿½ al
         var studentEnrollments = await _db.StudentCourseSections
       .Where(scs => scs.StudentId == studentId && !scs.IsCompleted)
             .ToListAsync();
@@ -386,7 +386,7 @@ return Ok(new
     var sectionCode = sectionGroup.Key;
    var sectionSchedules = sectionGroup.ToList();
 
-   // Kapasite kontrolü
+   // Kapasite kontrolï¿½
     var enrolledCount = await _db.StudentCourseSections
               .CountAsync(scs => scs.CourseId == courseId && scs.SectionCode == sectionCode);
 
@@ -398,7 +398,7 @@ return Ok(new
     continue;
   }
 
-   // Çakýþma kontrolü
+   // ï¿½akï¿½ï¿½ma kontrolï¿½
    bool hasConflict = false;
             foreach (var newSchedule in sectionSchedules)
          {
@@ -455,7 +455,7 @@ SectionCode = sectionCode,
         public string? Room { get; set; }
     }
 
-// Öðrencinin ders programýný getir
+// ï¿½ï¿½rencinin ders programï¿½nï¿½ getir
     [HttpGet("my-schedule")]
     [Authorize(Roles = "Student")]
     public async Task<IActionResult> GetMySchedule()
@@ -502,9 +502,9 @@ SectionCode = sectionCode,
         dayName = s.DayOfWeek switch
       {
             DayOfWeek.Monday => "Pazartesi",
-        DayOfWeek.Tuesday => "Salý",
- DayOfWeek.Wednesday => "Çarþamba",
-      DayOfWeek.Thursday => "Perþembe",
+        DayOfWeek.Tuesday => "Sali",
+ DayOfWeek.Wednesday => "Carsamba",
+      DayOfWeek.Thursday => "Persembe",
   DayOfWeek.Friday => "Cuma",
      _ => s.DayOfWeek.ToString()
                 },
@@ -521,13 +521,13 @@ roomNumber = s.RoomNumber,
      }
   }
 
-   // Haftalýk program
+   // Haftalï¿½k program
             var weeklySchedule = new Dictionary<string, List<object>>
   {
 { "Pazartesi", new List<object>() },
-     { "Salý", new List<object>() },
-        { "Çarþamba", new List<object>() },
-    { "Perþembe", new List<object>() },
+     { "Sali", new List<object>() },
+    { "Carsamba", new List<object>() },
+    { "Persembe", new List<object>() },
        { "Cuma", new List<object>() }
        };
 
@@ -542,9 +542,9 @@ roomNumber = s.RoomNumber,
                var dayName = schedule.DayOfWeek switch
        {
         DayOfWeek.Monday => "Pazartesi",
-  DayOfWeek.Tuesday => "Salý",
-             DayOfWeek.Wednesday => "Çarþamba",
-          DayOfWeek.Thursday => "Perþembe",
+  DayOfWeek.Tuesday => "Sali",
+             DayOfWeek.Wednesday => "Carsamba",
+          DayOfWeek.Thursday => "Persembe",
    DayOfWeek.Friday => "Cuma",
          _ => null
                };
@@ -567,7 +567,7 @@ roomNumber = s.RoomNumber,
    }
  }
 
-            // Günleri saate göre sýrala
+            // Gï¿½nleri saate gï¿½re sï¿½rala
       foreach (var day in weeklySchedule.Keys.ToList())
        {
                 weeklySchedule[day] = weeklySchedule[day]
@@ -626,7 +626,7 @@ return Ok(new
     }
     }
 
-    // Dersten çýk
+    // Dersten ï¿½ï¿½k
     [HttpDelete("{enrollmentId}")]
     [Authorize(Roles = "Student")]
     public async Task<IActionResult> Unenroll(int enrollmentId)

@@ -20,8 +20,8 @@ public class FileSizeValidationMiddleware
         _allowedContentTypes = new[]
         {
             "application/pdf",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" // .pptx
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" 
         };
     }
 
@@ -31,7 +31,7 @@ public class FileSizeValidationMiddleware
         {
             foreach (var file in context.Request.Form.Files)
             {
-                // Dosya boyutu kontrolü
+                
                 if (file.Length > _maxFileSize)
                 {
                     context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;

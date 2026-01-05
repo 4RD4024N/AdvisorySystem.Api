@@ -15,16 +15,16 @@ public class CourseScheduler : ICourseScheduler
     private readonly AppDbContext _db;
     private readonly ILogger<CourseScheduler> _logger;
 
-    // Ders saatleri: 09:00 - 17:00 arasý, her ders 50 dakika
+   
 private readonly List<TimeSpan> _timeSlots = new()
     {
-new TimeSpan(9, 0, 0),   // 09:00
-        new TimeSpan(10, 0, 0),  // 10:00
-   new TimeSpan(11, 0, 0),  // 11:00
-      new TimeSpan(13, 0, 0),  // 13:00 (öðle arasý sonrasý)
-        new TimeSpan(14, 0, 0),  // 14:00
-  new TimeSpan(15, 0, 0),  // 15:00
-   new TimeSpan(16, 0, 0)   // 16:00
+new TimeSpan(9, 0, 0),   
+        new TimeSpan(10, 0, 0), 
+   new TimeSpan(11, 0, 0),  
+      new TimeSpan(13, 0, 0),  
+        new TimeSpan(14, 0, 0), 
+  new TimeSpan(15, 0, 0),  
+   new TimeSpan(16, 0, 0)   
     };
 
     private readonly List<DayOfWeek> _workDays = new()
@@ -46,25 +46,25 @@ new TimeSpan(9, 0, 0),   // 09:00
     {
    try
       {
-        // Clear existing schedules for this semester
+        
          var existingSchedules = await _db.CourseSchedules
   .Where(cs => cs.Semester == semester)
  .ToListAsync();
             _db.CourseSchedules.RemoveRange(existingSchedules);
           await _db.SaveChangesAsync();
 
-   // Get all courses for this semester - client-side ordering to support computed properties
+ 
       var courses = await _db.Courses
        .Include(c => c.Category)
   .Where(c => c.Semester == semester && !c.IsElective)
         .ToListAsync();
 
-            // Sort in memory (client-side) to avoid EF Core translation issues with computed property
+            
             courses = courses.OrderByDescending(c => c.TotalWeeklyHours).ToList();
 
       var schedules = new List<CourseSchedule>();
 
- // Create multiple sections (A, B, C) for each course
+
      var sections = new[] { "A", "B", "C" };
 
       foreach (var sectionCode in sections)
@@ -129,15 +129,15 @@ int sessionNumber = 1;
     {
       var slotKey = $"{day}_{startTime}";
 
-     // Check if slot is already used
+
            if (usedSlots.ContainsKey(slotKey))
    continue;
 
- // Check if we have enough consecutive time
+
                     if (!HasConsecutiveSlots(day, startTime, sessionHours, usedSlots))
     continue;
 
-   // Assign this slot
+
      var endTime = startTime.Add(TimeSpan.FromMinutes(sessionHours * 50));
 
   var schedule = new CourseSchedule
@@ -156,7 +156,7 @@ int sessionNumber = 1;
 
     schedules.Add(schedule);
 
-   // Mark slots as used
+ 
      for (int i = 0; i < sessionHours; i++)
       {
         var slotTime = startTime.Add(TimeSpan.FromHours(i));
@@ -182,10 +182,7 @@ int sessionNumber = 1;
     {
         var sessions = new List<int>();
 
-      // 4 saat ? 2 + 2
-        // 3 saat ? 2 + 1
-        // 2 saat ? 2
- // 1 saat ? 1
+     
 
   while (totalHours > 0)
         {
@@ -256,7 +253,7 @@ if (!_timeSlots.Contains(slotTime))
     {
   _logger.LogInformation($"Detecting conflicts for semester {semester}");
 
-        // Önce bu semester için mevcut conflict kayýtlarýný temizle
+       
         var existingConflicts = await _db.ScheduleConflicts
             .Where(sc => _db.CourseSchedules.Any(cs => cs.Id == sc.Schedule1Id && cs.Semester == semester))
             .ToListAsync();
@@ -282,7 +279,7 @@ _logger.LogInformation($"Cleared {existingConflicts.Count} existing conflicts fo
     var s1 = schedules[i];
     var s2 = schedules[j];
 
-                // Ayný gün ve zaman çakýþmasý kontrolü
+                
                 if (s1.DayOfWeek == s2.DayOfWeek &&
            s1.StartTime < s2.EndTime &&
         s2.StartTime < s1.EndTime)
@@ -300,7 +297,7 @@ _logger.LogInformation($"Cleared {existingConflicts.Count} existing conflicts fo
           }
         }
 
-        // ? Çakýþmalarý veritabanýna kaydet
+       
         if (conflicts.Any())
       {
             _db.ScheduleConflicts.AddRange(conflicts);

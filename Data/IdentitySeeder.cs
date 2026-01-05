@@ -75,7 +75,7 @@ if (!await roleMgr.RoleExistsAsync(r))
  UserName = studentData.Email, 
         Email = studentData.Email, 
           EmailConfirmed = true,
-    AdvisorId = null  // Başlangıçta advisor atanmamış
+    AdvisorId = null  
      };
        await userMgr.CreateAsync(student, studentData.Password);
        await userMgr.AddToRoleAsync(student, "Student");
