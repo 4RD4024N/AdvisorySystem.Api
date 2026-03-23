@@ -1,0 +1,567 @@
+# ?? CI/CD Pipeline Configuration
+
+## GitHub Actions Workflow
+
+### .github/workflows/ci-cd.yml
+
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  AZURE_WEBAPP_NAME: 'advisory-system-api'
+  AZURE_WEBAPP_PACKAGE_PATH: './publish'
+
+jobs:
+  # ==================== BUILD & TEST ====================
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+ - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+     with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+    run: dotnet restore
+
+      - name: Build
+run: dotnet build --configuration Release --no-restore
+
+      - name: Run Unit Tests
+        run: dotnet test Tests/Controllers/*.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+      with:
+        files: '**/test-results.trx'
+
+      - name: Code Coverage
+        run: |
+          dotnet test Tests/Controllers/*.csproj --configuration Release --collect:"XPlat Code Coverage"
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator -reports:**/coverage.cobertura.xml -targetdir:./codecoverage -reporttypes:HtmlInline_AzurePipelines
+
+      - name: Upload Coverage
+  uses: codecov/codecov-action@v3
+  with:
+          files: ./codecoverage/Cobertura.xml
+          flags: unittests
+ name: codecov-umbrella
+
+  # ==================== SECURITY SCAN ====================
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+- name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+ uses: github/codeql-action/upload-sarif@v2
+     with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: OWASP Dependency Check
+   uses: dependency-check/Dependency-Check_Action@main
+        with:
+       project: 'AdvisorySystem.Api'
+     path: '.'
+          format: 'HTML'
+
+      - name: Upload Dependency Check Report
+      uses: actions/upload-artifact@v3
+     with:
+        name: dependency-check-report
+        path: dependency-check-report.html
+
+  # ==================== INTEGRATION TESTS ====================
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+      ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+       --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
+          --health-interval 10s
+    --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run Integration Tests
+    run: dotnet test Tests/Integration/*.csproj --configuration Release --logger "trx;LogFileName=integration-test-results.trx"
+        env:
+  ConnectionStrings__Default: "Server=localhost;Database=TestDb;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;"
+
+      - name: Publish Integration Test Results
+    uses: EnricoMi/publish-unit-test-result-action@v2
+if: always()
+        with:
+          files: '**/integration-test-results.trx'
+
+  # ==================== DOCKER BUILD ====================
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+ if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+ uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+  username: ${{ secrets.DOCKER_USERNAME }}
+  password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+    context: .
+          push: true
+  tags: |
+            ${{ secrets.DOCKER_USERNAME }}/advisory-system-api:latest
+       ${{ secrets.DOCKER_USERNAME }}/advisory-system-api:${{ github.sha }}
+     cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/advisory-system-api:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/advisory-system-api:buildcache,mode=max
+
+  # ==================== DEPLOY TO STAGING ====================
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, docker-build]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://advisory-system-staging.azurewebsites.net
+    
+  steps:
+  - name: Checkout code
+      uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+      dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish
+        run: dotnet publish --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Deploy to Azure Web App (Staging)
+     uses: azure/webapps-deploy@v2
+     with:
+  app-name: ${{ env.AZURE_WEBAPP_NAME }}-staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+    - name: Run Smoke Tests
+        run: |
+       sleep 30
+curl -f https://advisory-system-staging.azurewebsites.net/health || exit 1
+
+  # ==================== DEPLOY TO PRODUCTION ====================
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [integration-tests, docker-build]
+    if: github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: https://advisory-system.azurewebsites.net
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+    - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish
+        run: dotnet publish --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Deploy to Azure Web App (Production)
+        uses: azure/webapps-deploy@v2
+      with:
+   app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+    package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Run Smoke Tests
+      run: |
+          sleep 30
+   curl -f https://advisory-system.azurewebsites.net/health || exit 1
+
+      - name: Create Release Tag
+     if: success()
+      run: |
+          git config user.name github-actions
+   git config user.email github-actions@github.com
+     git tag -a v${{ github.run_number }} -m "Release v${{ github.run_number }}"
+          git push origin v${{ github.run_number }}
+
+  # ==================== ROLLBACK ====================
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/master'
+    needs: deploy-production
+    environment:
+      name: production
+    
+    steps:
+      - name: Rollback to previous version
+        uses: azure/CLI@v1
+   with:
+          azcliversion: latest
+          inlineScript: |
+          az webapp deployment slot swap \
+      --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+--name ${{ env.AZURE_WEBAPP_NAME }} \
+              --slot staging \
+       --target-slot production
+```
+
+## Dockerfile
+
+```dockerfile
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy csproj and restore dependencies
+COPY ["AdvisorySystem.Api.csproj", "./"]
+RUN dotnet restore
+
+# Copy everything else and build
+COPY . .
+RUN dotnet publish -c Release -o /app/publish
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup --system --gid 1000 dotnet && \
+    adduser --system --uid 1000 --ingroup dotnet --shell /bin/sh dotnet
+
+# Copy published app
+COPY --from=build /app/publish .
+
+# Change ownership
+RUN chown -R dotnet:dotnet /app
+
+# Switch to non-root user
+USER dotnet
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Entry point
+ENTRYPOINT ["dotnet", "AdvisorySystem.Api.dll"]
+```
+
+## .dockerignore
+
+```
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/.env
+**/node_modules
+**/npm-debug.log
+**/Dockerfile*
+**/docker-compose*
+**/.dockerignore
+**/README.md
+**/LICENSE
+**/.DS_Store
+**/TestResults
+**/coverage
+```
+
+## Azure DevOps Pipeline (Alternative)
+
+### azure-pipelines.yml
+
+```yaml
+trigger:
+  branches:
+    include:
+      - master
+   - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion: '8.0.x'
+
+stages:
+  - stage: Build
+  displayName: 'Build and Test'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Job'
+        steps:
+   - task: UseDotNet@2
+       displayName: 'Install .NET SDK'
+            inputs:
+              version: $(dotnetVersion)
+
+- task: DotNetCoreCLI@2
+        displayName: 'Restore NuGet Packages'
+     inputs:
+       command: 'restore'
+         projects: '**/*.csproj'
+
+          - task: DotNetCoreCLI@2
+         displayName: 'Build Solution'
+            inputs:
+     command: 'build'
+          projects: '**/*.csproj'
+          arguments: '--configuration $(buildConfiguration)'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Run Tests'
+            inputs:
+              command: 'test'
+         projects: '**/Tests/**/*.csproj'
+              arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+
+    - task: PublishCodeCoverageResults@1
+       displayName: 'Publish Code Coverage'
+            inputs:
+            codeCoverageTool: 'Cobertura'
+           summaryFileLocation: '$(Agent.TempDirectory)/**/*coverage.cobertura.xml'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Publish Application'
+            inputs:
+              command: 'publish'
+     publishWebProjects: true
+              arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+              zipAfterPublish: true
+
+          - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifacts'
+       inputs:
+     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+ ArtifactName: 'drop'
+
+  - stage: DeployStaging
+    displayName: 'Deploy to Staging'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - deployment: DeployJob
+        displayName: 'Deploy to Staging'
+        environment: 'staging'
+        strategy:
+          runOnce:
+   deploy:
+              steps:
+           - task: AzureWebApp@1
+          displayName: 'Deploy to Azure App Service'
+          inputs:
+    azureSubscription: 'Azure Subscription'
+         appType: 'webAppLinux'
+   appName: 'advisory-system-staging'
+      package: '$(Pipeline.Workspace)/drop/**/*.zip'
+
+  - stage: DeployProduction
+    displayName: 'Deploy to Production'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    jobs:
+      - deployment: DeployJob
+  displayName: 'Deploy to Production'
+        environment: 'production'
+        strategy:
+       runOnce:
+  deploy:
+         steps:
+        - task: AzureWebApp@1
+        displayName: 'Deploy to Azure App Service'
+      inputs:
+     azureSubscription: 'Azure Subscription'
+       appType: 'webAppLinux'
+     appName: 'advisory-system-prod'
+ package: '$(Pipeline.Workspace)/drop/**/*.zip'
+          
+   - task: AzureCLI@2
+         displayName: 'Run Database Migrations'
+     inputs:
+      azureSubscription: 'Azure Subscription'
+                 scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+           inlineScript: |
+      echo "Running database migrations..."
+      # Add migration command here
+```
+
+## Required GitHub Secrets
+
+```bash
+# Docker Hub
+DOCKER_USERNAME
+DOCKER_PASSWORD
+
+# Azure
+AZURE_WEBAPP_PUBLISH_PROFILE
+AZURE_WEBAPP_PUBLISH_PROFILE_STAGING
+AZURE_RESOURCE_GROUP
+
+# Database
+DB_CONNECTION_STRING
+DB_CONNECTION_STRING_STAGING
+
+# JWT
+JWT_SECRET_KEY
+
+# Azure Storage
+AZURE_STORAGE_CONNECTION_STRING
+
+# Application Insights
+APPINSIGHTS_CONNECTION_STRING
+```
+
+## Setting up Secrets
+
+```bash
+# GitHub
+gh secret set DOCKER_USERNAME --body "your-dockerhub-username"
+gh secret set DOCKER_PASSWORD --body "your-dockerhub-password"
+gh secret set AZURE_WEBAPP_PUBLISH_PROFILE --body @publish-profile.xml
+
+# Azure CLI
+az webapp deployment list-publishing-profiles \
+  --resource-group your-rg \
+  --name your-app-name \
+  --xml > publish-profile.xml
+```
+
+## Branch Strategy
+
+```
+master (production)
+  ?
+  ?? develop (staging)
+       ?
+    ?? feature/course-management
+       ?? feature/document-upload
+       ?? bugfix/rate-limiting
+```
+
+## Deployment Approval Process
+
+```yaml
+# .github/workflows/deployment-approval.yml
+name: Production Deployment Approval
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+   - completed
+
+jobs:
+  approve-deployment:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: production-approval
+    
+ steps:
+      - name: Wait for approval
+     run: echo "Waiting for manual approval..."
+      
+      # Deployment will wait here until approved in GitHub UI
+```
+
+## Monitoring After Deployment
+
+```bash
+# Check application logs
+az webapp log tail --resource-group your-rg --name your-app-name
+
+# Check health endpoint
+curl https://your-app.azurewebsites.net/health
+
+# Query Application Insights
+az monitor app-insights query \
+  --resource-group your-rg \
+  --app your-app-insights-name \
+--analytics-query "requests | where timestamp > ago(1h) | summarize count() by resultCode"
+```
+
+## Rollback Procedure
+
+```bash
+# Manual rollback via Azure CLI
+az webapp deployment slot swap \
+  --resource-group your-rg \
+  --name your-app-name \
+  --slot staging \
+  --target-slot production
+
+# Or via GitHub Actions (trigger rollback workflow)
+gh workflow run rollback.yml
+```
+
+## Load Testing in Pipeline
+
+```yaml
+# Add to CI/CD pipeline
+- name: Run Load Tests
+  run: |
+    npm install -g k6
+    k6 run Tests/LoadTesting/loadtest-smoke.js
+  env:
+    BASE_URL: https://advisory-system-staging.azurewebsites.net
+```
