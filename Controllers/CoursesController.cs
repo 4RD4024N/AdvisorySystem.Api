@@ -1,6 +1,7 @@
 using AdvisorySystem.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdvisorySystem.Api.Controllers;
@@ -8,6 +9,7 @@ namespace AdvisorySystem.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[EnableRateLimiting("standard")]
 public class CoursesController : ControllerBase
 {
     private readonly AppDbContext _db;
