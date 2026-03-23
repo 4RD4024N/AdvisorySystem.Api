@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 
 namespace AdvisorySystem.Api.Controllers;
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-strict")]
     public async Task<IActionResult> Register(RegisterDto dto)
     {
         var user = new AppUser { UserName = dto.Email, Email = dto.Email };
@@ -66,6 +68,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-strict")]
     public async Task<IActionResult> Login(LoginDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
@@ -95,6 +98,7 @@ public class AuthController : ControllerBase
     // Yeni: Token yenileme endpoint'i
     [HttpPost("refresh")]
     [Authorize]
+    [EnableRateLimiting("auth-relaxed")]
     public async Task<IActionResult> RefreshToken()
     {
   try
@@ -139,6 +143,7 @@ public class AuthController : ControllerBase
 // Yeni: Token validation endpoint
     [HttpGet("validate")]
     [Authorize]
+  [EnableRateLimiting("auth-relaxed")]
     public async Task<IActionResult> ValidateToken()
     {
         try

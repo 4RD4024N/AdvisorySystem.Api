@@ -2,6 +2,7 @@ using AdvisorySystem.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdvisorySystem.Api.Controllers;
@@ -9,6 +10,7 @@ namespace AdvisorySystem.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("admin")]
 public class DiagnosticsController : ControllerBase
 {
     private readonly UserManager<AppUser> _userManager;

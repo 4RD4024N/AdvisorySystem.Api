@@ -4,6 +4,7 @@ using AdvisorySystem.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,6 +13,7 @@ namespace AdvisorySystem.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("standard")]
     public class DocumentsController : ControllerBase
     {
         private readonly AppDbContext _db;
@@ -39,10 +41,10 @@ namespace AdvisorySystem.Api.Controllers
         // Öğrenci kendi dokümanlarını görsün
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> GetMine([FromQuery] string? title = null, 
+   public async Task<IActionResult> GetMine([FromQuery] string? title = null, 
         [FromQuery] DateTime? startDate = null,
     [FromQuery] DateTime? endDate = null)
-        {
+    {
    var uid = GetUserId();
    var isAdmin = User.IsInRole("Admin");
           var isAdvisor = User.IsInRole("Advisor");
@@ -118,8 +120,9 @@ else
 
         // Versiyon yükleme
         [HttpPost("{id:int}/versions")]
-        [Authorize] // role kontrolü: owner veya advisor olabilir
-        public async Task<IActionResult> Upload(int id, IFormFile file, string? notes)
+        [Authorize]
+        [EnableRateLimiting("upload")]
+     public async Task<IActionResult> Upload(int id, IFormFile file, string? notes)
         {
             if (file is null || file.Length == 0) return BadRequest("Dosya yok.");
             var doc = await _db.Documents.Include(x => x.Versions).FirstOrDefaultAsync(x => x.Id == id);
@@ -208,6 +211,7 @@ else
       // Dosyayı indir
         [HttpGet("download/{versionId:int}")]
         [Authorize]
+        [EnableRateLimiting("download")]
         public async Task<IActionResult> Download(int versionId)
         {
         var v = await _db.DocumentVersions
@@ -245,8 +249,9 @@ else
 
         // PDF Ön izleme - dosyayı inline göster
     [HttpGet("preview/{versionId:int}")]
-        [Authorize]
-  public async Task<IActionResult> PreviewPdf(int versionId)
+  [Authorize]
+        [EnableRateLimiting("download")]
+      public async Task<IActionResult> PreviewPdf(int versionId)
         {
       try
     {
@@ -309,9 +314,9 @@ else
     // Get document metadata (for PDF.js or other viewers)
         [HttpGet("metadata/{versionId:int}")]
         [Authorize]
-        public async Task<IActionResult> GetDocumentMetadata(int versionId)
-     {
-try
+   public async Task<IActionResult> GetDocumentMetadata(int versionId)
+        {
+         try
          {
          var v = await _db.DocumentVersions
     .Include(dv => dv.Document)
@@ -375,7 +380,7 @@ details = ex.Message
      }
 
         private static string FormatFileSize(long bytes)
-    {
+        {
     string[] sizes = { "B", "KB", "MB", "GB", "TB" };
             double len = bytes;
    int order = 0;

@@ -4,6 +4,7 @@ using AdvisorySystem.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,6 +14,7 @@ namespace AdvisorySystem.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[EnableRateLimiting("standard")]
 public class CommentsController : ControllerBase
 {
     private readonly AppDbContext _db;

@@ -18,7 +18,7 @@ public static class IdentitySeeder
 if (!await roleMgr.RoleExistsAsync(r))
             await roleMgr.CreateAsync(new IdentityRole(r));
 
-        // 1. Admin oluştur
+       
   var adminEmail = "admin@local";
      var admin = await userMgr.FindByEmailAsync(adminEmail);
         if (admin is null)
@@ -33,7 +33,7 @@ if (!await roleMgr.RoleExistsAsync(r))
             await userMgr.AddToRoleAsync(admin, "Admin");
         }
 
-        // 2. 3 Advisor oluştur
+       
  var advisors = new[]
         {
       new { Email = "advisor1@local", Password = "Advisor123!", Name = "Prof. Dr. Ahmet Yılmaz" },
@@ -75,7 +75,7 @@ if (!await roleMgr.RoleExistsAsync(r))
  UserName = studentData.Email, 
         Email = studentData.Email, 
           EmailConfirmed = true,
-    AdvisorId = null  
+    AdvisorId = null  // Başlangıçta advisor atanmamış
      };
        await userMgr.CreateAsync(student, studentData.Password);
        await userMgr.AddToRoleAsync(student, "Student");
