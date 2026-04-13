@@ -13,7 +13,7 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Logging ──────────────────────────────────────────────────────────────────
+// ── Logging ───────────────────────────────────────────────────────────────────
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -24,7 +24,7 @@ if (!string.IsNullOrEmpty(appInsightsConnectionString))
 {
     builder.Services.AddApplicationInsightsTelemetry(options =>
     {
-  options.ConnectionString = appInsightsConnectionString;
+        options.ConnectionString = appInsightsConnectionString;
     });
 }
 
@@ -54,34 +54,34 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-  RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
- factory: partition => new FixedWindowRateLimiterOptions
-          {
+    RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+      factory: _ => new FixedWindowRateLimiterOptions
+            {
                 AutoReplenishment = true,
-           PermitLimit = 100,
-                Window = TimeSpan.FromMinutes(1)
-     }));
+                PermitLimit = 100,
+       Window = TimeSpan.FromMinutes(1)
+    }));
 
     options.AddFixedWindowLimiter("auth-strict", opt =>
     {
-opt.PermitLimit = 5;
+        opt.PermitLimit = 5;
         opt.Window = TimeSpan.FromMinutes(1);
-    opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 0;
     });
 
-    options.AddFixedWindowLimiter("auth-relaxed", opt =>
- {
-        opt.PermitLimit = 30;
+  options.AddFixedWindowLimiter("auth-relaxed", opt =>
+    {
+    opt.PermitLimit = 30;
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+   opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 2;
     });
 
-  options.AddFixedWindowLimiter("upload", opt =>
+    options.AddFixedWindowLimiter("upload", opt =>
     {
- opt.PermitLimit = 10;
+        opt.PermitLimit = 10;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 2;
@@ -90,16 +90,16 @@ opt.PermitLimit = 5;
     options.AddFixedWindowLimiter("download", opt =>
     {
         opt.PermitLimit = 50;
-      opt.Window = TimeSpan.FromMinutes(1);
- opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-  opt.QueueLimit = 5;
-    });
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 5;
+  });
 
     options.AddSlidingWindowLimiter("search", opt =>
     {
- opt.PermitLimit = 30;
-        opt.Window = TimeSpan.FromMinutes(1);
-      opt.SegmentsPerWindow = 6;
+   opt.PermitLimit = 30;
+   opt.Window = TimeSpan.FromMinutes(1);
+        opt.SegmentsPerWindow = 6;
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 3;
     });
@@ -107,14 +107,14 @@ opt.PermitLimit = 5;
     options.AddFixedWindowLimiter("standard", opt =>
     {
         opt.PermitLimit = 60;
-   opt.Window = TimeSpan.FromMinutes(1);
+ opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
- opt.QueueLimit = 5;
+        opt.QueueLimit = 5;
     });
 
     options.AddFixedWindowLimiter("admin", opt =>
     {
-  opt.PermitLimit = 100;
+        opt.PermitLimit = 100;
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 10;
@@ -123,54 +123,51 @@ opt.PermitLimit = 5;
     options.OnRejected = async (context, token) =>
     {
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(
-  "Rate limit exceeded for {Endpoint} by {User} from {IP}",
-       context.HttpContext.Request.Path,
-            context.HttpContext.User.Identity?.Name ?? "anonymous",
-       context.HttpContext.Connection.RemoteIpAddress);
+        logger.LogWarning("Rate limit exceeded for {Endpoint} by {User} from {IP}",
+         context.HttpContext.Request.Path,
+      context.HttpContext.User.Identity?.Name ?? "anonymous",
+            context.HttpContext.Connection.RemoteIpAddress);
 
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
 
         if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
-            await context.HttpContext.Response.WriteAsJsonAsync(new
-            {
-    error = "Too many requests",
-   message = "Rate limit exceeded. Please try again later.",
-         retryAfter = retryAfter.TotalSeconds
-       }, cancellationToken: token);
+    await context.HttpContext.Response.WriteAsJsonAsync(new
+     {
+     error = "Too many requests",
+      message = "Rate limit exceeded. Please try again later.",
+  retryAfter = retryAfter.TotalSeconds
+            }, cancellationToken: token);
         }
         else
         {
-     await context.HttpContext.Response.WriteAsJsonAsync(new
-      {
-        error = "Too many requests",
+  await context.HttpContext.Response.WriteAsJsonAsync(new
+            {
+  error = "Too many requests",
     message = "Rate limit exceeded. Please try again later."
-         }, cancellationToken: token);
-        }
-    };
+            }, cancellationToken: token);
+      }
+ };
 });
 
-// ── CORS — origin'ler config'den okunuyor ─────────────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>()
     ?? ["http://localhost:5173", "http://localhost:5174",
-        "http://localhost:5175", "http://localhost:3000",
-        "https://localhost:44375", "https://nice-sand-008811f03.7.azurestaticapps.net"
-    ];
+      "http://localhost:5175", "http://localhost:3000",
+      "https://localhost:44375", "https://nice-sand-008811f03.7.azurestaticapps.net"];
 
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("frontend", p => p
-        .WithOrigins(allowedOrigins)
-  .AllowAnyHeader()
+      .WithOrigins(allowedOrigins)
+     .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
 
-    // Fallback: production static web app her zaman izinli
- o.AddPolicy("fallback", p => p
-    .WithOrigins("https://nice-sand-008811f03.7.azurestaticapps.net")
+    o.AddPolicy("fallback", p => p
+   .WithOrigins("https://nice-sand-008811f03.7.azurestaticapps.net")
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -180,8 +177,9 @@ builder.Services.AddCors(o =>
 var jwt = builder.Configuration.GetSection("Jwt");
 var jwtKeyValue = jwt["Key"];
 if (string.IsNullOrWhiteSpace(jwtKeyValue))
-    throw new InvalidOperationException("JWT Key is not configured. Set Jwt__Key environment variable.");
-var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKeyValue));
+    throw new InvalidOperationException(
+  "JWT Key is not configured. Set Jwt__Key environment variable in Azure App Service.");
+var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKeyValue));
 
 builder.Services.AddAuthentication(o =>
 {
@@ -193,44 +191,40 @@ builder.Services.AddAuthentication(o =>
     o.SaveToken = true;
     o.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidIssuer            = jwt["Issuer"],
-   ValidAudience = jwt["Audience"],
-      IssuerSigningKey    = key,
-        ValidateIssuer         = true,
-        ValidateAudience= true,
+        ValidIssuer           = jwt["Issuer"],
+        ValidAudience     = jwt["Audience"],
+        IssuerSigningKey         = jwtKey,
+        ValidateIssuer = true,
+ ValidateAudience         = true,
         ValidateIssuerSigningKey = true,
-        ValidateLifetime       = true,
-        ClockSkew              = TimeSpan.Zero
+        ValidateLifetime         = true,
+   ClockSkew          = TimeSpan.Zero
     };
 
-  o.Events = new JwtBearerEvents
+o.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = ctx =>
         {
-       var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError(ctx.Exception, "JWT authentication failed");
-     return Task.CompletedTask;
-},
-        OnMessageReceived = ctx => Task.CompletedTask,
-        OnChallenge = ctx =>
-   {
-          var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
- logger.LogWarning("JWT OnChallenge: {0}", ctx.ErrorDescription);
+   return Task.CompletedTask;
+        },
+ OnMessageReceived = ctx => Task.CompletedTask,
+   OnChallenge = ctx =>
+        {
+            var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+       logger.LogWarning("JWT OnChallenge: {0}", ctx.ErrorDescription);
             return Task.CompletedTask;
         }
     };
 });
 
-// ── File Storage — Console.WriteLine yerine ILogger kullanılıyor ──────────────
+// ── File Storage ──────────────────────────────────────────────────────────────
 var azureStorageConnectionString = builder.Configuration["Azure:StorageConnectionString"];
 if (!string.IsNullOrEmpty(azureStorageConnectionString))
-{
     builder.Services.AddScoped<IFileStorage, AzureBlobStorage>();
-}
 else
-{
     builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
-}
 
 // ── Application Services ──────────────────────────────────────────────────────
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -244,34 +238,34 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-  Description = "Enter the JWT token only (do NOT include the 'Bearer ' prefix).",
-    Name        = "Authorization",
-        In   = ParameterLocation.Header,
-        Type        = SecuritySchemeType.Http,
- Scheme      = "bearer",
-    BearerFormat = "JWT"
+        Description  = "Enter the JWT token only (do NOT include the 'Bearer ' prefix).",
+        Name         = "Authorization",
+        In           = ParameterLocation.Header,
+     Type      = SecuritySchemeType.Http,
+   Scheme       = "bearer",
+      BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
-        {
-       new OpenApiSecurityScheme
-          {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
-                Scheme    = "bearer",
-     Name      = "Bearer",
-      In        = ParameterLocation.Header
-            },
- Array.Empty<string>()
-        }
-  });
+   {
+         new OpenApiSecurityScheme
+            {
+ Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" },
+      Scheme    = "bearer",
+      Name      = "Bearer",
+     In     = ParameterLocation.Header
+        },
+     Array.Empty<string>()
+      }
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// ── Auto-migrate database on startup ─────────────────────────────────────────
+// ── Auto-migrate ──────────────────────────────────────────────────────────────
 try
 {
     using var migrateScope = app.Services.CreateScope();
@@ -290,20 +284,18 @@ try
     await IdentitySeeder.SeedAsync(app.Services);
     await CourseSeeder.SeedCoursesAsync(app.Services);
     await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
-  startupLogger.LogInformation("Seed data applied successfully");
+    startupLogger.LogInformation("Seed data applied successfully");
 }
 catch (Exception ex)
 {
     startupLogger.LogError(ex, "Error while seeding data");
 }
 
-// ── Storage log — ILogger ile ─────────────────────────────────────────────────
-startupLogger.LogInformation(
-    "File storage provider: {Provider}",
+// ── Storage log ───────────────────────────────────────────────────────────────
+startupLogger.LogInformation("File storage provider: {Provider}",
     string.IsNullOrEmpty(azureStorageConnectionString) ? "LocalFileStorage" : "AzureBlobStorage");
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
-// Swagger — sadece Development ortamında
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
