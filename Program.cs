@@ -299,21 +299,32 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // Production: sadece roller seed edilir
+    // Production: roller + kurs verileri seed edilir
     try
     {
         using var seedScope = app.Services.CreateScope();
         var roleMgr = seedScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         string[] roles = ["Student", "Advisor", "Admin"];
-    foreach (var r in roles)
-   if (!await roleMgr.RoleExistsAsync(r))
-      await roleMgr.CreateAsync(new IdentityRole(r));
+  foreach (var r in roles)
+            if (!await roleMgr.RoleExistsAsync(r))
+                await roleMgr.CreateAsync(new IdentityRole(r));
 
-        startupLogger.LogInformation("Production role seed completed");
+     startupLogger.LogInformation("Production role seed completed");
     }
     catch (Exception ex)
     {
-      startupLogger.LogError(ex, "Error while seeding production roles");
+        startupLogger.LogError(ex, "Error while seeding production roles");
+    }
+
+  try
+    {
+     await CourseSeeder.SeedCoursesAsync(app.Services);
+ await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
+        startupLogger.LogInformation("Production course seed completed");
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "Error while seeding production courses");
     }
 }
 
