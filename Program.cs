@@ -163,7 +163,14 @@ var allowedOrigins = builder.Configuration
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("frontend", p => p
-    .WithOrigins(allowedOrigins)
+        .WithOrigins(allowedOrigins)
+  .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
+
+    // Fallback: production static web app her zaman izinli
+ o.AddPolicy("fallback", p => p
+    .WithOrigins("https://nice-sand-008811f03.7.azurestaticapps.net")
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
@@ -324,7 +331,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("frontend");
+app.UseCors(app.Environment.IsDevelopment() ? "frontend" : "fallback");
 app.UseFileSizeValidation();
 app.UseRateLimiter();
 app.UseAuthentication();
