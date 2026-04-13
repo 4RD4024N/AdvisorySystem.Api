@@ -178,7 +178,10 @@ builder.Services.AddCors(o =>
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
 var jwt = builder.Configuration.GetSection("Jwt");
-var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
+var jwtKeyValue = jwt["Key"];
+if (string.IsNullOrWhiteSpace(jwtKeyValue))
+    throw new InvalidOperationException("JWT Key is not configured. Set Jwt__Key environment variable.");
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKeyValue));
 
 builder.Services.AddAuthentication(o =>
 {
@@ -287,7 +290,7 @@ try
     await IdentitySeeder.SeedAsync(app.Services);
     await CourseSeeder.SeedCoursesAsync(app.Services);
     await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
-    startupLogger.LogInformation("Seed data applied successfully");
+  startupLogger.LogInformation("Seed data applied successfully");
 }
 catch (Exception ex)
 {
