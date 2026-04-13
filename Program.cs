@@ -281,51 +281,17 @@ catch (Exception ex)
     startupLogger.LogError(ex, "Failed to apply database migrations");
 }
 
-// ── Seeding — ortam bazlı ─────────────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+// ── Seeding ───────────────────────────────────────────────────────────────────
+try
 {
-    // Development: tüm seed verisi
-    try
-    {
     await IdentitySeeder.SeedAsync(app.Services);
-        await CourseSeeder.SeedCoursesAsync(app.Services);
-        await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
-        startupLogger.LogInformation("Development seed data applied");
-    }
-    catch (Exception ex)
-    {
-     startupLogger.LogError(ex, "Error while seeding development data");
-    }
+    await CourseSeeder.SeedCoursesAsync(app.Services);
+    await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
+    startupLogger.LogInformation("Seed data applied successfully");
 }
-else
+catch (Exception ex)
 {
-    // Production: roller + kurs verileri seed edilir
-    try
-    {
-        using var seedScope = app.Services.CreateScope();
-        var roleMgr = seedScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        string[] roles = ["Student", "Advisor", "Admin"];
-  foreach (var r in roles)
-            if (!await roleMgr.RoleExistsAsync(r))
-                await roleMgr.CreateAsync(new IdentityRole(r));
-
-     startupLogger.LogInformation("Production role seed completed");
-    }
-    catch (Exception ex)
-    {
-        startupLogger.LogError(ex, "Error while seeding production roles");
-    }
-
-  try
-    {
-     await CourseSeeder.SeedCoursesAsync(app.Services);
- await CourseScheduleSeeder.SeedSchedulesAsync(app.Services);
-        startupLogger.LogInformation("Production course seed completed");
-    }
-    catch (Exception ex)
-    {
-        startupLogger.LogError(ex, "Error while seeding production courses");
-    }
+    startupLogger.LogError(ex, "Error while seeding data");
 }
 
 // ── Storage log — ILogger ile ─────────────────────────────────────────────────
