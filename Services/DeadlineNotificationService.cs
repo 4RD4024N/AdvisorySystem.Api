@@ -8,12 +8,12 @@ public class DeadlineNotificationService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DeadlineNotificationService> _logger;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(1); // Her saat kontrol et
+    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(1);
 
     public DeadlineNotificationService(
-    IServiceProvider serviceProvider,
+        IServiceProvider serviceProvider,
         ILogger<DeadlineNotificationService> logger)
-{
+    {
         _serviceProvider = serviceProvider;
         _logger = logger;
     }
@@ -25,70 +25,69 @@ public class DeadlineNotificationService : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             try
-         {
-      await CheckDeadlinesAsync();
-      }
-          catch (Exception ex)
+            {
+                await CheckDeadlinesAsync();
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error checking deadlines");
-  }
+            }
 
-        await Task.Delay(_checkInterval, stoppingToken);
+            await Task.Delay(_checkInterval, stoppingToken);
         }
 
         _logger.LogInformation("Deadline Notification Service stopped");
     }
 
     private async Task CheckDeadlinesAsync()
-{
+    {
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-  var now = DateTime.UtcNow;
-     var warningThreshold = now.AddDays(3); // 3 gün önceden uyar
+        var now = DateTime.UtcNow;
+        var warningThreshold = now.AddDays(3);
 
-     // Yaklaþan deadline'larý bul
         var upcomingDeadlines = await db.Submissions
-     .Where(s => s.Status == "Pending" && 
-          s.DueDate > now && 
-                s.DueDate <= warningThreshold)
-  .ToListAsync();
+            .Where(s => s.Status == "Pending" &&
+                        s.DueDate > now &&
+                        s.DueDate <= warningThreshold)
+            .ToListAsync();
 
         foreach (var submission in upcomingDeadlines)
         {
-    // Bu submission için daha önce bildirim gönderildi mi?
             var alreadyNotified = await db.Notifications
-        .AnyAsync(n => n.UserId == submission.StudentId &&
-      n.RelatedEntityId == submission.Id.ToString() &&
-         n.RelatedEntityType == "Submission" &&
-              n.Type == NotificationType.DeadlineApproaching &&
-           n.CreatedAt > now.AddDays(-3)); // Son 3 gün içinde
+                .AnyAsync(n => n.UserId == submission.StudentId &&
+                               n.RelatedEntityId == submission.Id.ToString() &&
+                               n.RelatedEntityType == "Submission" &&
+                               n.Type == NotificationType.DeadlineApproaching &&
+                               n.CreatedAt > now.AddDays(-3));
 
-  if (!alreadyNotified)
+            if (!alreadyNotified)
             {
-     var daysLeft = (submission.DueDate - now).Days;
-        var hoursLeft = (submission.DueDate - now).Hours;
+                var daysLeft = (submission.DueDate - now).Days;
+                var hoursLeft = (submission.DueDate - now).Hours;
 
-      var message = daysLeft > 0
-      ? $"Teslim tarihinize {daysLeft} gün kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}"
-  : $"Teslim tarihinize {hoursLeft} saat kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}";
+                var message = daysLeft > 0
+                    ? $"Teslim tarihinize {daysLeft} gün kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}"
+                    : $"Teslim tarihinize {hoursLeft} saat kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}";
 
-              var notification = new Notification
-     {
-        UserId = submission.StudentId,
-           Title = "Teslim Tarihi Yaklaþýyor",
-              Message = message,
+                var notification = new Notification
+                {
+                    UserId = submission.StudentId,
+                    Title = "Teslim Tarihi Yaklaþýyor",
+                    Message = message,
                     Type = NotificationType.DeadlineApproaching,
-    RelatedEntityId = submission.Id.ToString(),
-    RelatedEntityType = "Submission",
-      IsRead = false
-         };
+                    RelatedEntityId = submission.Id.ToString(),
+                    RelatedEntityType = "Submission",
+                    IsRead = false
+                };
 
                 db.Notifications.Add(notification);
-     await db.SaveChangesAsync();
+                await db.SaveChangesAsync();
 
-     _logger.LogInformation("Deadline notification sent to student {StudentId} for submission {SubmissionId}", 
-     submission.StudentId, submission.Id);
+                _logger.LogInformation(
+                    "Deadline notification sent to student {StudentId} for submission {SubmissionId}",
+                    submission.StudentId, submission.Id);
             }
         }
     }

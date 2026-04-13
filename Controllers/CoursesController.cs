@@ -1,6 +1,7 @@
 using AdvisorySystem.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdvisorySystem.Api.Controllers;
@@ -8,6 +9,7 @@ namespace AdvisorySystem.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[EnableRateLimiting("standard")]
 public class CoursesController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -144,7 +146,7 @@ c.Category.Id,
 
     // ?? TEST ENDPOINT - EF Core RAW DATA
     [HttpGet("test/raw/{id}")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]  // AllowAnonymous kaldýrýldý — production'da güvensiz
     public async Task<IActionResult> GetCourseRawTest(int id)
     {
         try
@@ -396,7 +398,7 @@ catch (Exception ex)
     );
 
     [HttpGet("diagnostics")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]  // AllowAnonymous kaldýrýldý — production'da güvensiz
     public async Task<IActionResult> GetDiagnostics()
     {
         try

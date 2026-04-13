@@ -2,12 +2,15 @@ using AdvisorySystem.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdvisorySystem.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]        // Tüm controller Admin'e kilitlendi
+[EnableRateLimiting("admin")]
 public class DebugController : ControllerBase
 {
  private readonly UserManager<AppUser> _userManager;
@@ -20,7 +23,7 @@ public class DebugController : ControllerBase
  }
 
  [HttpGet("seedinfo")]
- [AllowAnonymous]
+ // AllowAnonymous kaldýrýldý — production'da tüm kullanýcý bilgileri açýða çýkýyordu
  public async Task<IActionResult> SeedInfo()
  {
  var users = _userManager.Users;
@@ -37,9 +40,8 @@ public class DebugController : ControllerBase
  });
  }
 
- // Development helper: return a JWT for a given email if the user exists.
+ // AllowAnonymous kaldýrýldý — þifresiz token üretme endpointi production'da çok tehlikeliydi
  [HttpPost("token/{email}")]
- [AllowAnonymous]
  public async Task<IActionResult> IssueTokenFor(string email, [FromServices] IConfiguration cfg, [FromServices] UserManager<AppUser> userManager)
  {
  var user = await userManager.FindByEmailAsync(email);
@@ -69,9 +71,8 @@ public class DebugController : ControllerBase
  return Ok(new { token = written });
  }
 
- // Get all users with their roles
+ // AllowAnonymous kaldýrýldý — tüm kullanýcý listesi herkese açýktý
  [HttpGet("users")]
- [AllowAnonymous]
  public async Task<IActionResult> GetAllUsers()
  {
  var users = await _userManager.Users.ToListAsync();
@@ -93,9 +94,8 @@ public class DebugController : ControllerBase
  return Ok(result);
  }
 
- // Delete all users (DANGEROUS - development only)
+ // AllowAnonymous kaldýrýldý — herkes tüm kullanýcýlarý silebiliyordu!
  [HttpDelete("users/all")]
- [AllowAnonymous]
  public async Task<IActionResult> DeleteAllUsers()
  {
  var users = await _userManager.Users.ToListAsync();
@@ -123,9 +123,8 @@ public class DebugController : ControllerBase
  });
  }
 
- // Yeni: Rolsüz kullanýcýlara Student rolü ata
+ // AllowAnonymous kaldýrýldý
  [HttpPost("fix-missing-roles")]
- [AllowAnonymous]
  public async Task<IActionResult> FixMissingRoles()
  {
  var users = await _userManager.Users.ToListAsync();
@@ -166,12 +165,11 @@ errors.Add($"{user.Email}: {string.Join(", ", result.Errors.Select(e => e.Descri
         });
     }
 
-    // Yeni: Rolsüz kullanýcýlarý listele
+    // AllowAnonymous kaldýrýldý
     [HttpGet("users-without-roles")]
-    [AllowAnonymous]
     public async Task<IActionResult> GetUsersWithoutRoles()
     {
-    var users = await _userManager.Users.ToListAsync();
+   var users = await _userManager.Users.ToListAsync();
    var usersWithoutRoles = new List<object>();
 
         foreach (var user in users)

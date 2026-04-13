@@ -2,6 +2,7 @@ using AdvisorySystem.Api.Data;
 using AdvisorySystem.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdvisorySystem.Api.Controllers;
@@ -9,6 +10,7 @@ namespace AdvisorySystem.Api.Controllers;
 [ApiController]
 [Route("api/schedule")]
 [Authorize]
+[EnableRateLimiting("standard")]
 public class ScheduleController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -23,6 +25,7 @@ public class ScheduleController : ControllerBase
     }
 
     [HttpGet("search")]
+    [EnableRateLimiting("search")]
     public async Task<IActionResult> SearchCourses([FromQuery] string? query = null, [FromQuery] int? semester = null)
     {
         try

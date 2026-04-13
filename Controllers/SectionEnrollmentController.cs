@@ -1,15 +1,17 @@
 using AdvisorySystem.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace AdvisorySystem.Api.Controllers;
 
 [ApiController]
 [Route("api/section-enrollment")]
 [Authorize]
+[EnableRateLimiting("standard")]
 public class SectionEnrollmentController : ControllerBase
 {
     private readonly AppDbContext _db;
