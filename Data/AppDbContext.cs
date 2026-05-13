@@ -87,6 +87,8 @@ namespace AdvisorySystem.Api.Data
         public string UploadedByUserId { get; set; } = "";
         public string? Notes { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public ICollection<DocumentRating> Ratings { get; set; } = new List<DocumentRating>();
     }
     public class Submission
     {

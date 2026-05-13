@@ -225,44 +225,44 @@ ratings
 
     // Get ratings for my documents (Student)
     [HttpGet("my-documents")]
-  public async Task<IActionResult> GetMyDocumentRatings()
+    public async Task<IActionResult> GetMyDocumentRatings()
     {
         try
         {
-            var userId = GetUserId();
+ var userId = GetUserId();
 
-      var documentVersions = await _db.DocumentVersions
-                .Where(v => v.Document.OwnerUserId == userId)
-             .Include(v => v.Document)
-       .Select(v => new
-             {
-    v.Id,
-  documentId = v.Document.Id,
-          documentTitle = v.Document.Title,
-            v.VersionNo,
-       ratings = _db.DocumentRatings
-            .Where(r => r.DocumentVersionId == v.Id)
-             .Select(r => new
+            var documentVersions = await _db.DocumentVersions
+    .Where(v => v.Document.OwnerUserId == userId)
+  .Include(v => v.Document)
+                .Include(v => v.Ratings)
+      .ToListAsync();
+
+            var result = documentVersions
+    .Where(v => v.Ratings.Any())
+                .Select(v => new
        {
-   r.Id,
-     r.AdvisorUserId,
-              r.Score,
-        r.Comments,
-          r.CreatedAt
-         })
-         .ToList()
-                })
-        .Where(v => v.ratings.Any())
-     .ToListAsync();
+     v.Id,
+     documentId = v.Document.Id,
+         documentTitle = v.Document.Title,
+          v.VersionNo,
+   ratings = v.Ratings.Select(r => new
+        {
+    r.Id,
+          r.AdvisorUserId,
+     r.Score,
+    r.Comments,
+       r.CreatedAt
+           }).ToList()
+              });
 
-return Ok(documentVersions);
+   return Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get document ratings");
+  _logger.LogError(ex, "Failed to get document ratings");
             return StatusCode(500, new { error = "Failed to retrieve ratings", details = ex.Message });
         }
-    }
+ }
 
     // Delete rating (Admin or rating author)
     [HttpDelete("{id}")]
