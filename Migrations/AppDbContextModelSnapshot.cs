@@ -801,7 +801,7 @@ namespace AdvisorySystem.Api.Migrations
             modelBuilder.Entity("AdvisorySystem.Api.Data.DocumentRating", b =>
                 {
                     b.HasOne("AdvisorySystem.Api.Data.DocumentVersion", "DocumentVersion")
-                        .WithMany("Ratings")
+                        .WithMany()
                         .HasForeignKey("DocumentVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -941,11 +941,6 @@ namespace AdvisorySystem.Api.Migrations
             modelBuilder.Entity("AdvisorySystem.Api.Data.Document", b =>
                 {
                     b.Navigation("Versions");
-                });
-
-            modelBuilder.Entity("AdvisorySystem.Api.Data.DocumentVersion", b =>
-                {
-                    b.Navigation("Ratings");
                 });
 #pragma warning restore 612, 618
         }
