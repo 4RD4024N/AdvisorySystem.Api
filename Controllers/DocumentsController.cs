@@ -129,28 +129,48 @@ else
             if (doc is null) return NotFound();
 
             var uid = GetUserId();
-            // Yetki: sahibi veya danışmanı
-            if (uid != doc.OwnerUserId && uid != doc.AdvisorUserId && !User.IsInRole("Admin"))
-                return Forbid();
+            var isAdmin = User.IsInRole("Admin");
+            var isAdvisor = User.IsInRole("Advisor");
 
-            var versionNo = (doc.Versions.Max(v => (int?)v.VersionNo) ?? 0) + 1;
-            var result = await _storage.SaveAsync(file, $"doc-{doc.Id}");
-            var path = result.path;
+ bool canUpload = false;
+
+            if (isAdmin)
+          {
+    canUpload = true;
+    }
+ else if (uid == doc.OwnerUserId)
+        {
+ canUpload = true;
+      }
+         else if (isAdvisor)
+       {
+     // Advisor can only upload to their own students' documents
+        var student = await _users.FindByIdAsync(doc.OwnerUserId);
+     if (student != null && student.AdvisorId == uid)
+          canUpload = true;
+       }
+
+            if (!canUpload)
+       return Forbid();
+
+     var versionNo = (doc.Versions.Max(v => (int?)v.VersionNo) ?? 0) + 1;
+         var result = await _storage.SaveAsync(file, $"doc-{doc.Id}");
+         var path = result.path;
             var size = result.size;
 
             var ver = new DocumentVersion
-            {
-                DocumentId = doc.Id,
+        {
+    DocumentId = doc.Id,
                 VersionNo = versionNo,
-                FileName = file.FileName,
-                ContentType = file.ContentType,
-                Size = size,
-                StoragePath = path,
-                UploadedByUserId = uid,
-                Notes = notes
+  FileName = file.FileName,
+ContentType = file.ContentType,
+             Size = size,
+      StoragePath = path,
+   UploadedByUserId = uid,
+Notes = notes
             };
             _db.DocumentVersions.Add(ver);
-            await _db.SaveChangesAsync();
+         await _db.SaveChangesAsync();
 
             return Ok(new { ver.Id, ver.VersionNo });
         }
