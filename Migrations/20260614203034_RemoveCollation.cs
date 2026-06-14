@@ -5,19 +5,20 @@
 namespace AdvisorySystem.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class FixTurkishCollation : Migration
+    public partial class RemoveCollation : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Azure SQL availability group'ta ALTER DATABASE desteklenmiyor.
-            // DB zaten Turkish_CI_AS ile oluşturuldu — bu migration no-op.
+            migrationBuilder.AlterDatabase(
+                oldCollation: "Turkish_CI_AS");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // no-op
+            migrationBuilder.AlterDatabase(
+                collation: "Turkish_CI_AS");
         }
     }
 }
