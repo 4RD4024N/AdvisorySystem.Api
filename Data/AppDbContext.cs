@@ -38,7 +38,18 @@ namespace AdvisorySystem.Api.Data
                 .HasIndex(c => c.CourseCode)
                 .IsUnique();
 
-            
+            b.Entity<Course>()
+                .Property(c => c.CourseCode)
+                .HasMaxLength(20)
+                .IsUnicode(true)
+                .IsRequired();
+
+            b.Entity<Course>()
+                .Property(c => c.CourseName)
+                .HasMaxLength(300)
+                .IsUnicode(true)
+                .IsRequired();
+
             b.Entity<Course>()
                 .Property(c => c.Description)
                 .HasColumnType("nvarchar(MAX)")
