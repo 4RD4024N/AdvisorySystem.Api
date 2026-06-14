@@ -50,11 +50,13 @@ public static class CourseSeeder
 
         // Gerçek DB ID'lerini oku — identity sıfırlanmayabilir
         var savedCats = await db.CourseCategories
- .OrderBy(c => c.DisplayOrder)
-            .ToListAsync();
+     .OrderBy(c => c.DisplayOrder)
+     .ToListAsync();
 
-        // DisplayOrder ? gerçek Id eşlemesi
-        var cid = savedCats.ToDictionary(c => c.DisplayOrder, c => c.Id);
+        // Duplicate DisplayOrder varsa hata almamak için
+        var cid = savedCats
+            .GroupBy(c => c.DisplayOrder)
+            .ToDictionary(g => g.Key, g => g.First().Id);
 
         var courses = new List<Course>
      {
