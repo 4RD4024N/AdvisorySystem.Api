@@ -102,36 +102,36 @@ public class AdvisorsController : ControllerBase
       }
 
             // Send notification to student
-          await _notificationService.CreateNotificationAsync(
-     student.Id,
-        isUpdate ? "Öðretmeniniz Deðiþtirildi" : "Öðretmen Atandý",
-      $"{advisor.UserName} öðretmeniniz olarak {(isUpdate ? "güncellendi" : "atandý")}.",
-       NotificationType.AdvisorAssigned,
-      advisor.Id,
-          "Advisor"
-  );
+            await _notificationService.CreateNotificationAsync(
+         student.Id,
+        isUpdate ? "Ogretmeniniz Degistirildi" : "Ogretmen Atandi",
+    $"{advisor.UserName} ogretmeniniz olarak {(isUpdate ? "guncellendi" : "atandi")}.",
+      NotificationType.AdvisorAssigned,
+                advisor.Id,
+    "Advisor"
+         );
 
-          // Send notification to new advisor
+            // Send notification to new advisor
             await _notificationService.CreateNotificationAsync(
        advisor.Id,
- "Yeni Öðrenci Atandý",
-   $"{student.UserName} öðrenciniz olarak atandý.",
-      NotificationType.AdvisorAssigned,
-                student.Id,
-         "Student"
-            );
+     "Yeni Ogrenci Atandi",
+      $"{student.UserName} ogreniniz olarak atandi.",
+                NotificationType.AdvisorAssigned,
+        student.Id,
+     "Student"
+      );
 
-// If updating, notify previous advisor
-        if (isUpdate && previousAdvisorId != null)
-    {
-    await _notificationService.CreateNotificationAsync(
-      previousAdvisorId,
-            "Öðrenci Atamasý Kaldýrýldý",
-    $"{student.UserName} artýk öðrenciniz deðil.",
-  NotificationType.General,
-      null,
-     null
-          );
+            // If updating, notify previous advisor
+ if (isUpdate && previousAdvisorId != null)
+   {
+      await _notificationService.CreateNotificationAsync(
+          previousAdvisorId,
+             "Ogrenci Atamasi Kaldirildi",
+        $"{student.UserName} artik ogreniniz degil.",
+     NotificationType.General,
+           null,
+           null
+                );
             }
 
  _logger.LogInformation(
@@ -142,13 +142,13 @@ public class AdvisorsController : ControllerBase
 
         return Ok(new
     {
-         message = isUpdate ? "Öðretmen baþarýyla güncellendi" : "Öðretmen baþarýyla atandý",
-         studentId = student.Id,
-      studentName = student.UserName,
-     advisorId = advisor.Id,
-        advisorName = advisor.UserName,
-                isUpdate
-   });
+  message = isUpdate ? "Ogretmen basariyla guncellendi" : "Ogretmen basariyla atandi",
+                studentId = student.Id,
+    studentName = student.UserName,
+  advisorId = advisor.Id,
+       advisorName = advisor.UserName,
+   isUpdate
+          });
         }
       catch (Exception ex)
         {
@@ -194,22 +194,22 @@ public class AdvisorsController : ControllerBase
   // Notify student
             await _notificationService.CreateNotificationAsync(
     student.Id,
-     "Öðretmen Atamasý Kaldýrýldý",
-     "Öðretmen atamanýz kaldýrýldý.",
- NotificationType.General,
-      null,
-     null
-            );
-
-            // Notify previous advisor
-            await _notificationService.CreateNotificationAsync(
-     previousAdvisorId,
-            "Öðrenci Atamasý Kaldýrýldý",
-      $"{student.UserName} artýk öðrenciniz deðil.",
-             NotificationType.General,
-      null,
-null
+     "Ogretmen Atamasi Kaldirildi",
+  "Ogretmen atamaniz kaldirildi.",
+        NotificationType.General,
+  null,
+   null
        );
+
+     // Notify previous advisor
+      await _notificationService.CreateNotificationAsync(
+     previousAdvisorId,
+    "Ogrenci Atamasi Kaldirildi",
+   $"{student.UserName} artik ogreniniz degil.",
+    NotificationType.General,
+             null,
+  null
+         );
 
             _logger.LogInformation(
            "Advisor removed from student {StudentName} by admin",
@@ -217,9 +217,9 @@ null
             );
 
             return Ok(new
-            {
-    message = "Öðretmen atamasý baþarýyla kaldýrýldý",
-     studentId = student.Id,
+       {
+       message = "Ogretmen atamasi basariyla kaldirildi",
+         studentId = student.Id,
                 studentName = student.UserName
          });
         }

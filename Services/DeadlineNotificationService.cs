@@ -68,13 +68,13 @@ public class DeadlineNotificationService : BackgroundService
                 var hoursLeft = (submission.DueDate - now).Hours;
 
                 var message = daysLeft > 0
-                    ? $"Teslim tarihinize {daysLeft} gün kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}"
-                    : $"Teslim tarihinize {hoursLeft} saat kaldý. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}";
+                    ? $"Teslim tarihinize {daysLeft} gun kaldi. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}"
+                    : $"Teslim tarihinize {hoursLeft} saat kaldi. Tarih: {submission.DueDate:dd/MM/yyyy HH:mm}";
 
                 var notification = new Notification
                 {
                     UserId = submission.StudentId,
-                    Title = "Teslim Tarihi Yaklaþýyor",
+                    Title = "Teslim Tarihi Yaklasiyor",
                     Message = message,
                     Type = NotificationType.DeadlineApproaching,
                     RelatedEntityId = submission.Id.ToString(),
