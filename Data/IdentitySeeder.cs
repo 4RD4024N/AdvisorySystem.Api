@@ -36,9 +36,9 @@ if (!await roleMgr.RoleExistsAsync(r))
        
  var advisors = new[]
         {
-      new { Email = "advisor1@local", Password = "Advisor123!", Name = "Prof. Dr. Ahmet Yılmaz" },
-     new { Email = "advisor2@local", Password = "Advisor123!", Name = "Prof. Dr. Ayşe Demir" },
-   new { Email = "advisor3@local", Password = "Advisor123!", Name = "Doç. Dr. Mehmet Kaya" }
+    new { Email = "advisor1@local", Password = "Advisor123!", Name = "Prof. Dr. Ahmet Yilmaz" },
+            new { Email = "advisor2@local", Password = "Advisor123!", Name = "Prof. Dr. Ayse Demir" },
+    new { Email = "advisor3@local", Password = "Advisor123!", Name = "Doc. Dr. Mehmet Kaya" }
         };
 
         foreach (var advisorData in advisors)
@@ -60,9 +60,9 @@ if (!await roleMgr.RoleExistsAsync(r))
         // 3. 3 Student oluştur
  var students = new[]
         {
-  new { Email = "student1@local", Password = "Student123!", Name = "Ali Veli" },
- new { Email = "student2@local", Password = "Student123!", Name = "Fatma Yıldız" },
-            new { Email = "student3@local", Password = "Student123!", Name = "Can Öztürk" }
+            new { Email = "student1@local", Password = "Student123!", Name = "Ali Veli" },
+     new { Email = "student2@local", Password = "Student123!", Name = "Fatma Yildiz" },
+     new { Email = "student3@local", Password = "Student123!", Name = "Can Ozturk" }
         };
 
         foreach (var studentData in students)

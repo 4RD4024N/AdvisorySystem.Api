@@ -11,286 +11,272 @@ public static class CourseSeeder
         using var scope = sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var existingCourses = await db.Courses.ToListAsync();
+    var existingCourses = await db.Courses.ToListAsync();
         if (existingCourses.Any())
         {
-            var prerequisites = await db.Prerequisites.ToListAsync();
-  db.Prerequisites.RemoveRange(prerequisites);
-        var schedules = await db.CourseSchedules.ToListAsync();
-    db.CourseSchedules.RemoveRange(schedules);
-       var studentSections = await db.StudentCourseSections.ToListAsync();
+     var prerequisites = await db.Prerequisites.ToListAsync();
+    db.Prerequisites.RemoveRange(prerequisites);
+var schedules = await db.CourseSchedules.ToListAsync();
+     db.CourseSchedules.RemoveRange(schedules);
+            var studentSections = await db.StudentCourseSections.ToListAsync();
             db.StudentCourseSections.RemoveRange(studentSections);
-            var studentCourses = await db.StudentCourses.ToListAsync();
+   var studentCourses = await db.StudentCourses.ToListAsync();
             db.StudentCourses.RemoveRange(studentCourses);
         db.Courses.RemoveRange(existingCourses);
         var existingCategories = await db.CourseCategories.ToListAsync();
-    db.CourseCategories.RemoveRange(existingCategories);
-         await db.SaveChangesAsync();
-     }
+ db.CourseCategories.RemoveRange(existingCategories);
+        await db.SaveChangesAsync();
+  }
 
         var categories = new List<CourseCategory>
         {
-            new() { Name = "Üniversite Zorunlu Dersleri",  Description = "Tüm öðrenciler için zorunlu",          DisplayOrder = 1  },
-        new() { Name = "Birinci Yarýyýl (Güz)",        Description = "1. Sýnýf Güz Dönemi",         DisplayOrder = 2  },
-   new() { Name = "Ýkinci Yarýyýl (Bahar)",       Description = "1. Sýnýf Bahar Dönemi",        DisplayOrder = 3  },
-      new() { Name = "Üçüncü Yarýyýl (Güz)",        Description = "2. Sýnýf Güz Dönemi",      DisplayOrder = 4  },
-         new() { Name = "Dördüncü Yarýyýl (Bahar)",    Description = "2. Sýnýf Bahar Dönemi",     DisplayOrder = 5  },
-            new() { Name = "Beþinci Yarýyýl (Güz)",       Description = "3. Sýnýf Güz Dönemi",       DisplayOrder = 6  },
-    new() { Name = "Altýncý Yarýyýl (Bahar)",Description = "3. Sýnýf Bahar Dönemi",    DisplayOrder = 7  },
-    new() { Name = "Yedinci Yarýyýl (Güz)",       Description = "4. Sýnýf Güz Dönemi",        DisplayOrder = 8  },
-  new() { Name = "Sekizinci Yarýyýl (Bahar)",   Description = "4. Sýnýf Bahar Dönemi",           DisplayOrder = 9  },
-        new() { Name = "Teknik Seçmeli Dersler",      Description = "Teknik alanda seçmeli dersler",          DisplayOrder = 10 },
-            new() { Name = "Sosyal Seçmeli Dersler", Description = "Sosyal bilimler seçmeli dersler",    DisplayOrder = 11 },
-   new() { Name = "Ortak Seçmeli Dersler",       Description = "Güzel sanatlar ve genel seçmeli dersler",   DisplayOrder = 12 },
-            new() { Name = "Katalog Dýþý Seçmeli Ders",   Description = "Özel seçmeli dersler",               DisplayOrder = 13 },
+            new() { Name = "Universite Zorunlu Dersleri",  Description = "Tum ogrenciler icin zorunlu",     DisplayOrder = 1  },
+            new() { Name = "Birinci Yariyil (Guz)",         Description = "1. Sinif Guz Donemi",      DisplayOrder = 2  },
+        new() { Name = "Ikinci Yariyil (Bahar)",        Description = "1. Sinif Bahar Donemi",     DisplayOrder = 3  },
+  new() { Name = "Ucuncu Yariyil (Guz)",  Description = "2. Sinif Guz Donemi",             DisplayOrder = 4  },
+        new() { Name = "Dorduncu Yariyil (Bahar)",      Description = "2. Sinif Bahar Donemi",         DisplayOrder = 5  },
+            new() { Name = "Besinci Yariyil (Guz)",         Description = "3. Sinif Guz Donemi",     DisplayOrder = 6  },
+        new() { Name = "Altinci Yariyil (Bahar)",    Description = "3. Sinif Bahar Donemi",       DisplayOrder = 7  },
+     new() { Name = "Yedinci Yariyil (Guz)",         Description = "4. Sinif Guz Donemi",     DisplayOrder = 8  },
+   new() { Name = "Sekizinci Yariyil (Bahar)",     Description = "4. Sinif Bahar Donemi",           DisplayOrder = 9  },
+     new() { Name = "Teknik Secmeli Dersler",        Description = "Teknik alanda secmeli dersler",             DisplayOrder = 10 },
+            new() { Name = "Sosyal Secmeli Dersler",        Description = "Sosyal bilimler secmeli dersler",       DisplayOrder = 11 },
+ new() { Name = "Ortak Secmeli Dersler",         Description = "Guzel sanatlar ve genel secmeli dersler",   DisplayOrder = 12 },
+        new() { Name = "Katalog Disi Secmeli Ders",     Description = "Ozel secmeli dersler",    DisplayOrder = 13 },
         };
 
         await db.CourseCategories.AddRangeAsync(categories);
-  await db.SaveChangesAsync();
+      await db.SaveChangesAsync();
 
-        // Gerçek DB ID'lerini oku — identity sýfýrlanmayabilir
         var savedCats = await db.CourseCategories
-     .OrderBy(c => c.DisplayOrder)
-     .ToListAsync();
+            .OrderBy(c => c.DisplayOrder)
+            .ToListAsync();
 
-        // Duplicate DisplayOrder varsa hata almamak için
         var cid = savedCats
-            .GroupBy(c => c.DisplayOrder)
-            .ToDictionary(g => g.Key, g => g.First().Id);
+  .GroupBy(c => c.DisplayOrder)
+    .ToDictionary(g => g.Key, g => g.First().Id);
 
         var courses = new List<Course>
-     {
-        // Üniversite Zorunlu Dersleri (DisplayOrder=1)
-          new() { CourseCode = "KRY100",  CourseName = "KARÝYER PLANLAMA",          TheoryHours = 1, PracticeHours = 0, Credits = 1, ECTS = 2, CategoryId = cid[1]  },
-       new() { CourseCode = "ORY100",  CourseName = "ÜNÝVERSÝTE HAYATINA GÝRÝÞ",     TheoryHours = 1, PracticeHours = 0, Credits = 1, ECTS = 1, CategoryId = cid[1]  },
+        {
+ // Universite Zorunlu Dersleri (DisplayOrder=1)
+  new() { CourseCode = "KRY100",   CourseName = "KARIYER PLANLAMA",               TheoryHours = 1, PracticeHours = 0, Credits = 1, ECTS = 2, CategoryId = cid[1]  },
+            new() { CourseCode = "ORY100",   CourseName = "UNIVERSITE HAYATINA GIRIS",     TheoryHours = 1, PracticeHours = 0, Credits = 1, ECTS = 1, CategoryId = cid[1]  },
 
- // 1. Yarýyýl (DisplayOrder=2)
-        new() { CourseCode = "BÝL101",  CourseName = "BÝLGÝSAYAR YAZILIMI I",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[2],  Semester = 1 },
-       new() { CourseCode = "BÝL105",  CourseName = "PROGRAMLAMA LABORATUVARI I",               TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
-            new() { CourseCode = "BÝL110",  CourseName = "BÝLGÝSAYAR MÜHENDÝSLÝÐÝNE GÝRÝÞ",      TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 4, CategoryId = cid[2],  Semester = 1 },
-  new() { CourseCode = "ENG199",  CourseName = "ADVANCED ENGLISH I",       TheoryHours = 4, PracticeHours = 0, Credits = 4, ECTS = 4, CategoryId = cid[2],  Semester = 1 },
-            new() { CourseCode = "FÝZ103",  CourseName = "MEKANÝK LABORATUVARI",      TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
-   new() { CourseCode = "FÝZ105",  CourseName = "GENEL FÝZÝK I",    TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[2],  Semester = 1 },
-       new() { CourseCode = "MAT151",  CourseName = "MATEMATÝKSEL ANALÝZ I",            TheoryHours = 4, PracticeHours = 1, Credits = 4, ECTS = 6, CategoryId = cid[2],  Semester = 1 },
-    new() { CourseCode = "TÜRK101", CourseName = "TÜRK DÝLÝ I",        TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
+  // 1. Yariyil (DisplayOrder=2)
+            new() { CourseCode = "BIL101", CourseName = "BILGISAYAR YAZILIMI I",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[2],  Semester = 1 },
+          new() { CourseCode = "BIL105",   CourseName = "PROGRAMLAMA LABORATUVARI I",              TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
+    new() { CourseCode = "BIL110",   CourseName = "BILGISAYAR MUHENDISLIGINE GIRIS",TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 4, CategoryId = cid[2],  Semester = 1 },
+    new() { CourseCode = "ENG199",   CourseName = "ADVANCED ENGLISH I",   TheoryHours = 4, PracticeHours = 0, Credits = 4, ECTS = 4, CategoryId = cid[2],  Semester = 1 },
+  new() { CourseCode = "FIZ103",   CourseName = "MEKANIK LABORATUVARI",         TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
+          new() { CourseCode = "FIZ105",   CourseName = "GENEL FIZIK I",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[2],  Semester = 1 },
+          new() { CourseCode = "MAT151",   CourseName = "MATEMATIKSEL ANALIZ I",     TheoryHours = 4, PracticeHours = 1, Credits = 4, ECTS = 6, CategoryId = cid[2],  Semester = 1 },
+     new() { CourseCode = "TURK101",  CourseName = "TURK DILI I",       TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[2],  Semester = 1 },
 
-            // 2. Yarýyýl (DisplayOrder=3)
-       new() { CourseCode = "BÝL122",  CourseName = "ÝLERÝ PROGRAMLAMA",          TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[3],  Semester = 2 },
-            new() { CourseCode = "BÝL124",  CourseName = "ÝLERÝ PROGRAMLAMA UYGULAMALARI",        TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
-     new() { CourseCode = "BÝL172",  CourseName = "YAÞAM BÝLÝMLERÝ VE BÝLGÝSAYAR MÜHENDÝSLÝÐÝ",TheoryHours = 2, PracticeHours = 1, Credits = 2, ECTS = 4, CategoryId = cid[3],  Semester = 2 },
-       new() { CourseCode = "FÝZ104",  CourseName = "ELEKTRÝK LABORATUVARI",         TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
-            new() { CourseCode = "FÝZ110",  CourseName = "GENEL FÝZÝK II",   TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[3],  Semester = 2 },
-         new() { CourseCode = "MAT152",  CourseName = "MATEMATÝKSEL ANALÝZ II",       TheoryHours = 4, PracticeHours = 1, Credits = 4, ECTS = 6, CategoryId = cid[3],  Semester = 2 },
-   new() { CourseCode = "MAT210",  CourseName = "DOÐRUSAL CEBÝR",             TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[3],  Semester = 2 },
-            new() { CourseCode = "TÜRK102", CourseName = "TÜRK DÝLÝ II",           TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
+      // 2. Yariyil (DisplayOrder=3)
+            new() { CourseCode = "BIL122",CourseName = "ILERI PROGRAMLAMA",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[3],  Semester = 2 },
+     new() { CourseCode = "BIL124",   CourseName = "ILERI PROGRAMLAMA UYGULAMALARI",      TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
+            new() { CourseCode = "BIL172",   CourseName = "YASAM BILIMLERI VE BILGISAYAR MUHENDISLIGI",    TheoryHours = 2, PracticeHours = 1, Credits = 2, ECTS = 4, CategoryId = cid[3],  Semester = 2 },
+  new() { CourseCode = "FIZ104",   CourseName = "ELEKTRIK LABORATUVARI",      TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
+            new() { CourseCode = "FIZ110",   CourseName = "GENEL FIZIK II",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[3],  Semester = 2 },
+            new() { CourseCode = "MAT152",   CourseName = "MATEMATIKSEL ANALIZ II",          TheoryHours = 4, PracticeHours = 1, Credits = 4, ECTS = 6, CategoryId = cid[3],  Semester = 2 },
+    new() { CourseCode = "MAT210",   CourseName = "DOGRUSAL CEBIR",          TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[3],  Semester = 2 },
+ new() { CourseCode = "TURK102",  CourseName = "TURK DILI II",        TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[3],  Semester = 2 },
 
-        // 3. Yarýyýl (DisplayOrder=4)
-   new() { CourseCode = "ATA201",  CourseName = "ATATÜRK ÝLKELERÝ VE ÝNKILAP TARÝHÝ I",      TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[4],  Semester = 3 },
-       new() { CourseCode = "BÝL231",  CourseName = "AYRIK YAPILAR",       TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[4],  Semester = 3 },
-            new() { CourseCode = "BÝL265",  CourseName = "VERÝ YAPILARI",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 7, CategoryId = cid[4],  Semester = 3 },
- new() { CourseCode = "BÝL275",  CourseName = "SAYISAL MANTIK TASARIMI",   TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[4],  Semester = 3 },
-            new() { CourseCode = "ENG200",  CourseName = "ADVANCED ENGLISH II",            TheoryHours = 4, PracticeHours = 0, Credits = 4, ECTS = 4, CategoryId = cid[4],  Semester = 3 },
-            new() { CourseCode = "SOS203",  CourseName = "EKONOMÝ",              TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 4, CategoryId = cid[4],  Semester = 3 },
+// 3. Yariyil (DisplayOrder=4)
+            new() { CourseCode = "ATA201",   CourseName = "ATATURK ILKELERI VE INKILAP TARIHI I",            TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[4],  Semester = 3 },
+            new() { CourseCode = "BIL231",   CourseName = "AYRIK YAPILAR",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[4],  Semester = 3 },
+     new() { CourseCode = "BIL265",   CourseName = "VERI YAPILARI",           TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 7, CategoryId = cid[4],  Semester = 3 },
+    new() { CourseCode = "BIL275", CourseName = "SAYISAL MANTIK TASARIMI",            TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[4],  Semester = 3 },
+ new() { CourseCode = "ENG200",   CourseName = "ADVANCED ENGLISH II",         TheoryHours = 4, PracticeHours = 0, Credits = 4, ECTS = 4, CategoryId = cid[4],  Semester = 3 },
+          new() { CourseCode = "SOS203",   CourseName = "EKONOMI",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 4, CategoryId = cid[4],  Semester = 3 },
 
-            // 4. Yarýyýl (DisplayOrder=5)
-   new() { CourseCode = "ATA202",  CourseName = "ATATÜRK ÝLKELERÝ VE ÝNKILAP TARÝHÝ II",     TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[5],  Semester = 4 },
-            new() { CourseCode = "BÝL210",  CourseName = "ELEKTRONÝÐE GÝRÝÞ",           TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
-        new() { CourseCode = "BÝL218",  CourseName = "BÝLGÝSAYAR ORGANÝZASYONU",       TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
-            new() { CourseCode = "BÝL240",  CourseName = "PROGRAMLAMA DÝLLERÝ",            TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
-   new() { CourseCode = "MAT250",  CourseName = "OLASILIK VE ÝSTATÝSTÝK",                  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[5],  Semester = 4 },
-            new() { CourseCode = "MAT286",  CourseName = "BÝLGÝSAYAR MÜHENDÝSLÝÐÝ ÝÇÝN MATEMATÝK",   TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[5],  Semester = 4 },
+   // 4. Yariyil (DisplayOrder=5)
+       new() { CourseCode = "ATA202",   CourseName = "ATATURK ILKELERI VE INKILAP TARIHI II",        TheoryHours = 2, PracticeHours = 0, Credits = 2, ECTS = 2, CategoryId = cid[5],  Semester = 4 },
+        new() { CourseCode = "BIL210",   CourseName = "ELEKTRONIGE GIRIS",   TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
+         new() { CourseCode = "BIL218",   CourseName = "BILGISAYAR ORGANIZASYONU",                TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
+            new() { CourseCode = "BIL240",   CourseName = "PROGRAMLAMA DILLERI",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 6, CategoryId = cid[5],  Semester = 4 },
+      new() { CourseCode = "MAT250",   CourseName = "OLASILIK VE ISTATISTIK",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[5],  Semester = 4 },
+new() { CourseCode = "MAT286",   CourseName = "BILGISAYAR MUHENDISLIGI ICIN MATEMATIK",             TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[5],  Semester = 4 },
 
-            // 5. Yarýyýl (DisplayOrder=6)
-            new() { CourseCode = "BÝL300",  CourseName = "STAJ I",    TheoryHours = 0, PracticeHours = 0, Credits = 0, ECTS = 2, CategoryId = cid[6],  Semester = 5 },
-  new() { CourseCode = "BÝL324",  CourseName = "MÝKROÝÞLEMCÝLER",           TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
- new() { CourseCode = "BÝL343",  CourseName = "NESNE YÖNELÝMLÝ PROGRAMLAMA",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
-new() { CourseCode = "BÝL367",  CourseName = "ALGORÝTMALAR",   TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
-      new() { CourseCode = "ENG330",  CourseName = "DEVELOPING ENGLISH LANGUAGE SKILLS",         TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[6],  Semester = 5 },
-            new() { CourseCode = "MAT311",  CourseName = "SAYISAL ANALÝZ TEKNÝKLERÝ",          TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
-       new() { CourseCode = "SOS204",  CourseName = "ÝÞLETME",      TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 4, CategoryId = cid[6],  Semester = 5 },
+            // 5. Yariyil (DisplayOrder=6)
+new() { CourseCode = "BIL300",   CourseName = "STAJ I",       TheoryHours = 0, PracticeHours = 0, Credits = 0, ECTS = 2, CategoryId = cid[6],  Semester = 5 },
+            new() { CourseCode = "BIL324",   CourseName = "MIKROISLEMCILER",      TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
+            new() { CourseCode = "BIL343",   CourseName = "NESNE YONELIMLI PROGRAMLAMA",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
+            new() { CourseCode = "BIL367",   CourseName = "ALGORITMALAR",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
+       new() { CourseCode = "ENG330",   CourseName = "DEVELOPING ENGLISH LANGUAGE SKILLS",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[6],  Semester = 5 },
+ new() { CourseCode = "MAT311",   CourseName = "SAYISAL ANALIZ TEKNIKLERI",    TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 5, CategoryId = cid[6],  Semester = 5 },
+ new() { CourseCode = "SOS204",   CourseName = "ISLETME",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 4, CategoryId = cid[6],  Semester = 5 },
 
-     // 6. Yarýyýl (DisplayOrder=7)
-        new() { CourseCode = "BÝL001",  CourseName = "TEKNÝK SEÇMELÝK I",         TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[7],Semester = 6, IsElective = true },
-      new() { CourseCode = "BÝL007",  CourseName = "SOSYAL SEÇMELÝK",TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[7],  Semester = 6, IsElective = true },
- new() { CourseCode = "BÝL332",  CourseName = "ÝÞLETÝM SÝSTEMLERÝ",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
-          new() { CourseCode = "BÝL344",  CourseName = "VERÝTABANI SÝSTEMLERÝ",                 TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
-     new() { CourseCode = "BÝL386",  CourseName = "YAZILIM MÜHENDÝSLÝÐÝNE GÝRÝÞ",              TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
-        new() { CourseCode = "GSBHSH",  CourseName = "SEÇMELÝ GÜZEL SANATLAR/ÝLK YARDIM",      TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[7],  Semester = 6, IsElective = true },
+            // 6. Yariyil (DisplayOrder=7)
+      new() { CourseCode = "BIL001",   CourseName = "TEKNIK SECMELIK I",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[7],  Semester = 6, IsElective = true },
+            new() { CourseCode = "BIL007",   CourseName = "SOSYAL SECMELIK",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[7],  Semester = 6, IsElective = true },
+      new() { CourseCode = "BIL332",   CourseName = "ISLETIM SISTEMLERI",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
+            new() { CourseCode = "BIL344",   CourseName = "VERITABANI SISTEMLERI",     TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
+   new() { CourseCode = "BIL386",   CourseName = "YAZILIM MUHENDISLIGINE GIRIS",          TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 7, CategoryId = cid[7],  Semester = 6 },
+ new() { CourseCode = "GSBHSH",   CourseName = "SECMELI GUZEL SANATLAR/ILK YARDIM",                  TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[7],  Semester = 6, IsElective = true },
 
-   // 7. Yarýyýl (DisplayOrder=8)
-            new() { CourseCode = "BÝL002",  CourseName = "TEKNÝK SEÇMELÝK II",                TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[8],  Semester = 7, IsElective = true },
-          new() { CourseCode = "BÝL003",  CourseName = "TEKNÝK SEÇMELÝK III",        TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[8],  Semester = 7, IsElective = true },
-    new() { CourseCode = "BÝL493",  CourseName = "BÝTÝRME PROJESÝ I",      TheoryHours = 0, PracticeHours = 4, Credits = 2, ECTS = 7, CategoryId = cid[8],  Semester = 7 },
-            new() { CourseCode = "BÝL498",  CourseName = "STAJ II",      TheoryHours = 0, PracticeHours = 0, Credits = 0, ECTS = 3, CategoryId = cid[8],  Semester = 7 },
-       new() { CourseCode = "BÝL499",  CourseName = "BÝLGÝSAYAR AÐLARI",       TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 6, CategoryId = cid[8],  Semester = 7 },
-            new() { CourseCode = "ENG460",  CourseName = "PRESENTATION SKILLS",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[8],  Semester = 7 },
+            // 7. Yariyil (DisplayOrder=8)
+            new() { CourseCode = "BIL002",   CourseName = "TEKNIK SECMELIK II",        TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[8],  Semester = 7, IsElective = true },
+            new() { CourseCode = "BIL003",CourseName = "TEKNIK SECMELIK III",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[8],  Semester = 7, IsElective = true },
+      new() { CourseCode = "BIL493",   CourseName = "BITIRME PROJESI I",   TheoryHours = 0, PracticeHours = 4, Credits = 2, ECTS = 7, CategoryId = cid[8],  Semester = 7 },
+   new() { CourseCode = "BIL498",   CourseName = "STAJ II", TheoryHours = 0, PracticeHours = 0, Credits = 0, ECTS = 3, CategoryId = cid[8],  Semester = 7 },
+        new() { CourseCode = "BIL499",   CourseName = "BILGISAYAR AGLARI",TheoryHours = 3, PracticeHours = 2, Credits = 4, ECTS = 6, CategoryId = cid[8],  Semester = 7 },
+new() { CourseCode = "ENG460",   CourseName = "PRESENTATION SKILLS",       TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 4, CategoryId = cid[8],  Semester = 7 },
 
-            // 8. Yarýyýl (DisplayOrder=9)
-    new() { CourseCode = "BÝL004",  CourseName = "TEKNÝK SEÇMELÝK IV", TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
-          new() { CourseCode = "BÝL005",  CourseName = "TEKNÝK SEÇMELÝK V",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
-    new() { CourseCode = "BÝL006",  CourseName = "TEKNÝK SEÇMELÝK VI",         TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
-         new() { CourseCode = "BÝL482",  CourseName = "ETÝK,TOPLUM VE MESLEK",  TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 7, CategoryId = cid[9],  Semester = 8 },
-        new() { CourseCode = "BÝL494",  CourseName = "BÝTÝRME PROJESÝ II",       TheoryHours = 0, PracticeHours = 4, Credits = 2, ECTS = 8, CategoryId = cid[9],  Semester = 8 },
+      // 8. Yariyil (DisplayOrder=9)
+            new() { CourseCode = "BIL004",   CourseName = "TEKNIK SECMELIK IV",        TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
+ new() { CourseCode = "BIL005",   CourseName = "TEKNIK SECMELIK V",  TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
+    new() { CourseCode = "BIL006",   CourseName = "TEKNIK SECMELIK VI",  TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[9],  Semester = 8, IsElective = true },
+          new() { CourseCode = "BIL482",   CourseName = "ETIK, TOPLUM VE MESLEK",            TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 7, CategoryId = cid[9],  Semester = 8 },
+            new() { CourseCode = "BIL494",   CourseName = "BITIRME PROJESI II",        TheoryHours = 0, PracticeHours = 4, Credits = 2, ECTS = 8, CategoryId = cid[9],  Semester = 8 },
 
-          // Teknik Seçmeli (DisplayOrder=10)
-            new() { CourseCode = "BÝL321",  CourseName = "HESAPLAMALI GRAFÝK",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-    new() { CourseCode = "BÝL328",  CourseName = "OTOMATA TEORÝSÝ",        TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-    new() { CourseCode = "BÝL345",  CourseName = "SÝSTEM MÜHENDÝSLÝÐÝ",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-   new() { CourseCode = "BÝL363",  CourseName = "ÝNSAN BÝLGÝSAYAR ETKÝLEÞÝMÝ",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL383",  CourseName = "YÖNETÝM BÝLÝÞÝM SÝSTEMLERÝ",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-          new() { CourseCode = "BÝL387",  CourseName = "WEB TASARIMI VE UYGULAMALARI",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-      new() { CourseCode = "BÝL388",  CourseName = "E-TÝCARET VE E-ÝÞ",       TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-      new() { CourseCode = "BÝL389",  CourseName = "BÝLGÝSAYAR AÐ UYGULAMALARI",    TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-         new() { CourseCode = "BÝL390",CourseName = "YAZILIM KALÝTE YÖNETÝMÝ", TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL391",  CourseName = "MOBÝL UYGULAMA GELÝÞTÝRME",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-  new() { CourseCode = "BÝL392",  CourseName = "OYUN TEKNOLOJÝLERÝ",       TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-   new() { CourseCode = "BÝL393",  CourseName = "YÖNEYLEMsARAÞTIRMASI",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-      new() { CourseCode = "BÝL395",  CourseName = "UYGULAMALI VERÝ ANALÝZÝ",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-         new() { CourseCode = "BÝL396",  CourseName = "BÝLGÝSAYAR BÝLÝMLERÝNDE GÜNCEL KONULAR",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL443",  CourseName = "KRÝPTOGRAFÝ VE GÜVENLÝK",TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-         new() { CourseCode = "BÝL447",  CourseName = "GÖMÜLÜSÝSTEMLER",             TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-        new() { CourseCode = "BÝL454",  CourseName = "UYGULAMALI UML",          TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL456",  CourseName = "ÝMGE ÝÞLEME",           TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-  new() { CourseCode = "BÝL457",  CourseName = "KUANTUM HESAPLAMAYA GÝRÝÞ",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-new() { CourseCode = "BÝL458",  CourseName = "BULUT ÇÖZÜME GÝRÝÞ",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-  new() { CourseCode = "BÝL459",  CourseName = "YAZILIM MÝMARÝLERÝ",      TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL466",  CourseName = "BÝYOBÝLÝÞÝM",      TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL471",  CourseName = "BÝLGÝSAYARLA GÖRME",            TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL473",  CourseName = "TIP BÝLÝÞÝMÝ",           TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-new() { CourseCode = "BÝL475",  CourseName = "ÇÝZGE KURAMI",            TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-        new() { CourseCode = "BÝL477",  CourseName = "VERÝ MADENCÝLÝÐÝNE GÝRÝÞ",                TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
- new() { CourseCode = "BÝL478",  CourseName = "PARALEL VERÝ ÝÞLEME",         TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL479",  CourseName = "ÖRÜNTÜ TANIMA",  TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL480",  CourseName = "YAPAY ZEKA",          TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL481",  CourseName = "BÝLGÝSAYAR MÜHENDÝSLÝÐÝNDE ÖZEL KONULAR", TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-   new() { CourseCode = "BÝL489",  CourseName = "ÇOKLUORTAM SÝSTEMLERÝ",           TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL490",  CourseName = "SAYISAL YÖNTEMLER VE OPTÝMÝZASYON",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-            new() { CourseCode = "BÝL495",  CourseName = "UNIX SÝSTEM PROGRAMLAMA",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
-new() { CourseCode = "BÝL497",CourseName = "GERÇEK ZAMANLI SÝSTEMLER",               TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+// Teknik Secmeli (DisplayOrder=10)
+            new() { CourseCode = "BIL321",   CourseName = "HESAPLAMALI GRAFIK",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL328",   CourseName = "OTOMATA TEORISI", TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+         new() { CourseCode = "BIL345",   CourseName = "SISTEM MUHENDISLIGI",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+ new() { CourseCode = "BIL363",   CourseName = "INSAN BILGISAYAR ETKILESIMI",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+   new() { CourseCode = "BIL383",   CourseName = "YONETIM BILISIM SISTEMLERI",        TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+      new() { CourseCode = "BIL387",   CourseName = "WEB TASARIMI VE UYGULAMALARI",             TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+      new() { CourseCode = "BIL388",   CourseName = "E-TICARET VE E-IS",    TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+   new() { CourseCode = "BIL389",   CourseName = "BILGISAYAR AG UYGULAMALARI",     TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL390",   CourseName = "YAZILIM KALITE YONETIMI",                TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+   new() { CourseCode = "BIL391",   CourseName = "MOBIL UYGULAMA GELISTIRME",   TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL392",   CourseName = "OYUN TEKNOLOJILERI",TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+ new() { CourseCode = "BIL393",   CourseName = "YONEYLEM ARASTIRMASI",     TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL395",   CourseName = "UYGULAMALI VERI ANALIZI",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+         new() { CourseCode = "BIL396",   CourseName = "BILGISAYAR BILIMLERINDE GUNCEL KONULAR",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL443",   CourseName = "KRIPTOGRAFI VE GUVENLIK", TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+     new() { CourseCode = "BIL447",   CourseName = "GOMULU SISTEMLER",          TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+    new() { CourseCode = "BIL454",   CourseName = "UYGULAMALI UML",          TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL456",   CourseName = "IMGE ISLEME",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+new() { CourseCode = "BIL457",   CourseName = "KUANTUM HESAPLAMAYA GIRIS",       TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+    new() { CourseCode = "BIL458",   CourseName = "BULUT COZUME GIRIS",         TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+          new() { CourseCode = "BIL459",   CourseName = "YAZILIM MIMARILERI",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+          new() { CourseCode = "BIL466",   CourseName = "BIYOBILISIM",             TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+  new() { CourseCode = "BIL471",   CourseName = "BILGISAYARLA GORME",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+     new() { CourseCode = "BIL473",   CourseName = "TIP BILISIMI",          TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+       new() { CourseCode = "BIL475",   CourseName = "CIZGE KURAMI",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+         new() { CourseCode = "BIL477",   CourseName = "VERI MADENCILIGINE GIRIS",          TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+  new() { CourseCode = "BIL478",   CourseName = "PARALEL VERI ISLEME",         TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+        new() { CourseCode = "BIL479",   CourseName = "ORUNTU TANIMA",        TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL480",   CourseName = "YAPAY ZEKA",   TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL481",   CourseName = "BILGISAYAR MUHENDISLIGINDE OZEL KONULAR",            TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL489",   CourseName = "COKLUORTAM SISTEMLERI",             TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL490",   CourseName = "SAYISAL YONTEMLER VE OPTIMIZASYON",      TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL495",   CourseName = "UNIX SISTEM PROGRAMLAMA",         TheoryHours = 3, PracticeHours = 1, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
+            new() { CourseCode = "BIL497",   CourseName = "GERCEK ZAMANLI SISTEMLER",           TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 5, CategoryId = cid[10], IsElective = true },
 
-          // Sosyal Seçmeli (DisplayOrder=11)
-    new() { CourseCode = "SOS321",  CourseName = "ÝLETÝÞÝM",      TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[11], IsElective = true },
-    new() { CourseCode = "SOS322",  CourseName = "ÝÞLETME YÖNETÝMÝNE GÝRÝÞ",    TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[11], IsElective = true },
+      // Sosyal Secmeli (DisplayOrder=11)
+    new() { CourseCode = "SOS321",   CourseName = "ILETISIM",     TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[11], IsElective = true },
+ new() { CourseCode = "SOS322",   CourseName = "ISLETME YONETIMINE GIRIS",            TheoryHours = 3, PracticeHours = 0, Credits = 3, ECTS = 3, CategoryId = cid[11], IsElective = true },
 
-   // Ortak Seçmeli (DisplayOrder=12)
-            new() { CourseCode = "GSB101",  CourseName = "FOTOÐRAFÇILIK",TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-        new() { CourseCode = "GSB102",  CourseName = "FOTOÐRAFÇILIK II",       TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-      new() { CourseCode = "GSB103",  CourseName = "HEYKEL",           TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB104",  CourseName = "HEYKEL II",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB105",  CourseName = "KLASÝK MÜZÝK DÝNLEME KÜLTÜRÜ",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-       new() { CourseCode = "GSB107",  CourseName = "GÖRSEL KÜLTÜR VE SANATIN TARÝHÝ",  TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-        new() { CourseCode = "GSB109",  CourseName = "ANADOLU ARKEOLOJÝSÝ",   TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-   new() { CourseCode = "GSB111",  CourseName = "SÝNEMA KÜLTÜRÜ VE TARÝHÝ",           TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-        new() { CourseCode = "GSB113",  CourseName = "RESÝM",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
- new() { CourseCode = "GSB115",  CourseName = "DOÐAÇLAMA VE ÝLÝÞKÝLÝ DOÐAÇLAMA",          TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-     new() { CourseCode = "GSB117",  CourseName = "ÇAÐDAÞ DANSI ANLAMA VE YORUMLAMA",          TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-new() { CourseCode = "GSB119",  CourseName = "ÝNSAN VE ÇEVRE ETKÝLEÞÝMÝ",       TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-    new() { CourseCode = "GSB121",  CourseName = "TASARIM KÜLTÜR VE TÜKETÝM",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-          new() { CourseCode = "GSB123",  CourseName = "ÇAÐDAÞ DANSA GÝRÝÞ",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-      new() { CourseCode = "GSB125",  CourseName = "TAKI TASARIMI",                TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-     new() { CourseCode = "GSB127",  CourseName = "SERAMÝK",       TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB129",  CourseName = "KENTLER VE TARÝHSEL ÇEVRE",                TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB131",  CourseName = "21.YÜZYILDA DÜNYA VE SANATTA EÐÝLÝMLER", TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB133",  CourseName = "ÇAÐLAR BOYU MÜZÝK TÜRLERÝ",TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB135",  CourseName = "SANAT VE EDEBÝYAT ESERLERÝNDE EVRENSEL HUKUK ÝLKELERÝ", TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-        new() { CourseCode = "GSB137",  CourseName = "ETKÝLÝ VE GÜZEL KONUÞMA",              TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "GSB139",  CourseName = "GÜNCEL TEMEL EKONOMÝ",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-       new() { CourseCode = "HSH100",  CourseName = "TEMEL ÝLK YARDIM",             TheoryHours = 1, PracticeHours = 1, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-            new() { CourseCode = "KAM100",  CourseName = "KIBRIS TÜRKLERÝNÝN YAKIN TARÝHÝ",       TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-  new() { CourseCode = "TIP099",  CourseName = "TOPLUMSAL CÝNSÝYET VE KADINA YÖNELÝK ÞÝDDET", TheoryHours = 1, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
-     new() { CourseCode = "YAKE100", CourseName = "YARATICI KÜLTÜR ENDÜSTRÝLERÝ",   TheoryHours = 2, PracticeHours = 0, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            // Ortak Secmeli (DisplayOrder=12)
+    new() { CourseCode = "GSB101",   CourseName = "FOTOGRAFCILIK",           TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+    new() { CourseCode = "GSB102",   CourseName = "FOTOGRAFCILIK II", TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+ new() { CourseCode = "GSB103",   CourseName = "HEYKEL",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB104",   CourseName = "HEYKEL II",           TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB105",   CourseName = "KLASIK MUZIK DINLEME KULTURU",              TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB107",   CourseName = "GORSEL KULTUR VE SANATIN TARIHI",             TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB109",CourseName = "ANADOLU ARKEOLOJISI",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+          new() { CourseCode = "GSB111",   CourseName = "SINEMA KULTURU VE TARIHI",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+new() { CourseCode = "GSB113",   CourseName = "RESIM",          TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+    new() { CourseCode = "GSB115",   CourseName = "DOGACLAMA VE ILISKILI DOGACLAMA",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB117",   CourseName = "CAGDAS DANSI ANLAMA VE YORUMLAMA",            TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB119",   CourseName = "INSAN VE CEVRE ETKILESIMI",        TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB121",   CourseName = "TASARIM KULTUR VE TUKETIM",   TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+     new() { CourseCode = "GSB123",   CourseName = "CAGDAS DANSA GIRIS",          TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+ new() { CourseCode = "GSB125",   CourseName = "TAKI TASARIMI",   TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB127",   CourseName = "SERAMIK",      TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+new() { CourseCode = "GSB129",   CourseName = "KENTLER VE TARIHSEL CEVRE",   TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB131",   CourseName = "21. YUZYILDA DUNYA VE SANATTA EGILIMLER",     TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "GSB133",   CourseName = "CAGLAR BOYU MUZIK TURLERI",  TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+     new() { CourseCode = "GSB135",   CourseName = "SANAT VE EDEBIYAT ESERLERINDE EVRENSEL HUKUK ILKELERI", TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+        new() { CourseCode = "GSB137",   CourseName = "ETKILI VE GUZEL KONUSMA",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+      new() { CourseCode = "GSB139",   CourseName = "GUNCEL TEMEL EKONOMI",    TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+      new() { CourseCode = "HSH100",   CourseName = "TEMEL ILK YARDIM",       TheoryHours = 1, PracticeHours = 1, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "KAM100",   CourseName = "KIBRIS TURKLERININ YAKIN TARIHI",         TheoryHours = 0, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+   new() { CourseCode = "TIP099",   CourseName = "TOPLUMSAL CINSIYET VE KADINA YONELIK SIDDET",     TheoryHours = 1, PracticeHours = 2, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
+            new() { CourseCode = "YAKE100",  CourseName = "YARATICI KULTUR ENDUSTRILERI",           TheoryHours = 2, PracticeHours = 0, Credits = 1, ECTS = 1, CategoryId = cid[12], IsElective = true },
 
-            // Katalog Dýþý (DisplayOrder=13)
-            new() { CourseCode = "GNLÝ310", CourseName = "GÖNÜLLÜLÜK ÇALIÞMALARI",      TheoryHours = 1, PracticeHours = 2, Credits = 2, ECTS = 4, CategoryId = cid[13], IsElective = true },
+   // Katalog Disi (DisplayOrder=13)
+ new() { CourseCode = "GNLI310",  CourseName = "GONULLULUK CALISMALARI",      TheoryHours = 1, PracticeHours = 2, Credits = 2, ECTS = 4, CategoryId = cid[13], IsElective = true },
         };
 
-      await db.Courses.AddRangeAsync(courses);
-  await db.SaveChangesAsync();
+   await db.Courses.AddRangeAsync(courses);
+      await db.SaveChangesAsync();
 
-        await AddPrerequisites(db);
-  }
+await AddPrerequisites(db);
+    }
 
     private static async Task AddPrerequisites(AppDbContext db)
     {
-        var bil122 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL122");
-        var bil101 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL101");
+   var bil122 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL122");
+ var bil101 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL101");
 
         var mat152 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT152");
         var mat151 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT151");
 
-        var bil265 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL265");
+        var bil265 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL265");
 
         var eng200 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "ENG200");
         var eng199 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "ENG199");
 
-        var bil210 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL210");
-        var fiz110 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "FÝZ110");
+        var bil210 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL210");
+        var fiz110 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "FIZ110");
 
-        var bil218 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL218");
-        var bil275 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL275");
+        var bil218 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL218");
+        var bil275 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL275");
 
-        var bil240 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL240");
+      var bil240 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL240");
 
         var mat286 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT286");
 
-        var bil367 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL367");
+        var bil367 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL367");
 
-        var mat311 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT311");
+  var mat311 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "MAT311");
 
-        var bil390 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL390");
-        var bil386 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL386");
+        var bil390 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL390");
+        var bil386 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL386");
 
-        var bil498 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL498");
-        var bil300 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL300");
+        var bil498 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL498");
+     var bil300 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL300");
 
-        var bil494 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL494");
-        var bil493 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BÝL493");
+        var bil494 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL494");
+        var bil493 = await db.Courses.FirstOrDefaultAsync(c => c.CourseCode == "BIL493");
 
         var prerequisites = new List<Prerequisite>();
 
         if (bil122 != null && bil101 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil122.Id, PrerequisiteCourseId = bil101.Id });
-
         if (mat152 != null && mat151 != null)
             prerequisites.Add(new Prerequisite { CourseId = mat152.Id, PrerequisiteCourseId = mat151.Id });
-
         if (bil265 != null && bil122 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil265.Id, PrerequisiteCourseId = bil122.Id });
-
         if (eng200 != null && eng199 != null)
             prerequisites.Add(new Prerequisite { CourseId = eng200.Id, PrerequisiteCourseId = eng199.Id });
-
         if (bil210 != null && fiz110 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil210.Id, PrerequisiteCourseId = fiz110.Id });
-
-        if (bil218 != null && bil275 != null)
-            prerequisites.Add(new Prerequisite { CourseId = bil218.Id, PrerequisiteCourseId = bil275.Id });
-
+if (bil218 != null && bil275 != null)
+prerequisites.Add(new Prerequisite { CourseId = bil218.Id, PrerequisiteCourseId = bil275.Id });
         if (bil240 != null && bil122 != null)
-            prerequisites.Add(new Prerequisite { CourseId = bil240.Id, PrerequisiteCourseId = bil122.Id });
-
+       prerequisites.Add(new Prerequisite { CourseId = bil240.Id, PrerequisiteCourseId = bil122.Id });
         if (mat286 != null && mat152 != null)
             prerequisites.Add(new Prerequisite { CourseId = mat286.Id, PrerequisiteCourseId = mat152.Id });
-
         if (bil367 != null && bil265 != null)
             prerequisites.Add(new Prerequisite { CourseId = bil367.Id, PrerequisiteCourseId = bil265.Id });
-
         if (mat311 != null && mat151 != null)
-            prerequisites.Add(new Prerequisite { CourseId = mat311.Id, PrerequisiteCourseId = mat151.Id });
-
+       prerequisites.Add(new Prerequisite { CourseId = mat311.Id, PrerequisiteCourseId = mat151.Id });
         if (bil390 != null && bil386 != null)
-            prerequisites.Add(new Prerequisite { CourseId = bil390.Id, PrerequisiteCourseId = bil386.Id });
-
+       prerequisites.Add(new Prerequisite { CourseId = bil390.Id, PrerequisiteCourseId = bil386.Id });
         if (bil498 != null && bil300 != null)
-            prerequisites.Add(new Prerequisite { CourseId = bil498.Id, PrerequisiteCourseId = bil300.Id });
-
+ prerequisites.Add(new Prerequisite { CourseId = bil498.Id, PrerequisiteCourseId = bil300.Id });
         if (bil494 != null && bil493 != null)
-            prerequisites.Add(new Prerequisite { CourseId = bil494.Id, PrerequisiteCourseId = bil493.Id });
+   prerequisites.Add(new Prerequisite { CourseId = bil494.Id, PrerequisiteCourseId = bil493.Id });
 
         if (prerequisites.Any())
         {
-            await db.Prerequisites.AddRangeAsync(prerequisites);
-            await db.SaveChangesAsync();
-        }
+        await db.Prerequisites.AddRangeAsync(prerequisites);
+    await db.SaveChangesAsync();
+     }
     }
 }

@@ -42,12 +42,12 @@ public static class CourseScheduleSeeder
         var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday };
         var instructors = new[] 
         { 
-      "Prof. Dr. Ahmet Yýlmaz", 
-         "Doç. Dr. Ayþe Demir", 
-          "Dr. Öðr. Üyesi Mehmet Kaya",
-            "Arþ. Gör. Fatma Çelik",
-            "Öðr. Gör. Can Þahin"
-        };
+  "Prof. Dr. Ahmet Yilmaz", 
+      "Doc. Dr. Ayse Demir", 
+       "Dr. Ogr. Uyesi Mehmet Kaya",
+       "Ars. Gor. Fatma Celik",
+       "Ogr. Gor. Can Sahin"
+   };
 
         int currentTimeSlotIndex = 0;
         int currentDayIndex = 0;
