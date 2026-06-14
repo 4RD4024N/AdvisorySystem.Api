@@ -28,6 +28,8 @@ namespace AdvisorySystem.Api.Data
         {
             base.OnModelCreating(b);
 
+            b.UseCollation("Turkish_CI_AS"); // Türkçe karakter desteği
+
             b.Entity<AppUser>()
                 .HasOne(u => u.Advisor)
                 .WithMany()

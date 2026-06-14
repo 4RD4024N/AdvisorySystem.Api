@@ -11,9 +11,29 @@ public static class CourseSeeder
         using var scope = sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (await db.Courses.AnyAsync())
-        {
-            return;
+      // Mevcut veriyi temizle ve yeniden seed et (collation düzeltmesi için)
+ var existingCourses = await db.Courses.ToListAsync();
+        if (existingCourses.Any())
+ {
+            // Önce baðýmlý tablolarý temizle
+     var prerequisites = await db.Prerequisites.ToListAsync();
+            db.Prerequisites.RemoveRange(prerequisites);
+
+  var schedules = await db.CourseSchedules.ToListAsync();
+      db.CourseSchedules.RemoveRange(schedules);
+
+    var studentSections = await db.StudentCourseSections.ToListAsync();
+            db.StudentCourseSections.RemoveRange(studentSections);
+
+            var studentCourses = await db.StudentCourses.ToListAsync();
+   db.StudentCourses.RemoveRange(studentCourses);
+
+            db.Courses.RemoveRange(existingCourses);
+
+        var existingCategories = await db.CourseCategories.ToListAsync();
+            db.CourseCategories.RemoveRange(existingCategories);
+
+ await db.SaveChangesAsync();
         }
 
         var categories = new List<CourseCategory>
